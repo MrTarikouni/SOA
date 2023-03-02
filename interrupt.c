@@ -95,15 +95,17 @@ void setIdt()
 
   set_handlers();
 
+  /* Seteamos tres registros MSR */
+  mbr( 0x174, 0x0, __KERNEL_CS); 		//Code segment 
+  mbr( 0x175, 0x0, INITIAL_ESP); 		//System stack
+  mbr( 0x176, 0x0, system_call_handler); 	//System entry point
+
   /* ADD INITIALIZATION CODE FOR INTERRUPT VECTOR */
 
   //Hardware interrupts
   setInterruptHandler(32, clock_handler, 0);
   setInterruptHandler(33, keyboard_handler, 0);
-  
-  //Syscalls
-  setTrapHandler(0x80, system_call_handler, 3);
- 
+   
   set_idt_reg(&idtR);
 }
 

@@ -1,0 +1,17 @@
+#include <segent.h>
+#include <asm.h>
+
+ENTRY(msr)
+	push %ebp
+	movl %ebp, %esp
+
+	movl 0x08(%ebp), %ecx
+	movl 0x0C(%ebp), %edx
+	movl 0x10(%ebp), %eax
+
+	wrmsr
+	
+	movl %ebp, %esp
+	popl %ebp
+	ret
+

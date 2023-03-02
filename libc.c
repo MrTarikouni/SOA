@@ -7,6 +7,7 @@
 #include <types.h>
 
 int errno;
+void write(int fd, char *buffer, int size);
 
 void itoa(int a, char *b)
 {

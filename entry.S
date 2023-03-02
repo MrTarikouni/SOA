@@ -83,28 +83,27 @@ ENTRY (keyboard_handler)
 	RESTORE_ALL
 	iret
 
-ENTRY(sys_call_table)
-	.long sys_ni_syscall	// 0
-	.long sys_ni_syscall	// 1
-	.long sys_ni_syscall	// 2
-	.long sys_ni_syscall	// 3
-	.long sys_write		// 4
-.globl MAX_SYSCALL
-MAX_SYSCALL = (. - sys_call_table)/4
 
 
-ENTRY(system_call_handler)
+ENTRY(syscall_handler_sysenter)
+	push $__USER_DS
+	push %EBP 			// User stack address
+	pushfl
+	push $__USER_CS
+	push 4(%EBP) 			// User return address
 	SAVE_ALL
-	cmpl $0, %eax
-	jl err
-	cmpl $MAX_SYSCALL, %eax		//syscall > MAX_SYSCALL ?
-	jg err
-	call *sys_call_table(, %eax, 0x04)
-	jmp fin
-err:
-	movl $-ENOSYS, %eax
-fin:
-	movl %eax, 0x18(%esp)
+	cmpl $0, %EAX
+	jl sysenter_err
+	cmpl $MAX_SYSCALL, %EAX
+	jg sysenter_err
+	call *sys_call_table(, %EAX, 0x04)
+	jmp sysenter_fin
+sysenter_err:
+	movl $-ENOSYS, %EAX
+sysenter_fin:
+	movl %EAX, 0x18(%ESP)
 	RESTORE_ALL
-	iret
-	
+	movl (%ESP), %EDX 		// Return address
+	movl 12(%ESP), %ECX 		// User stack address
+	sti 				// Enable interrupts again
+	sysexit	
