@@ -75,6 +75,7 @@ void setTrapHandler(int vector, void (*handler)(), int maxAccessibleFromPL)
 
 void clock_handler(void);
 void keyboard_handler(void);
+void system_call_handler(void);
 
 void clock_routine(){
 	zeos_show_clock();
@@ -95,8 +96,14 @@ void setIdt()
   set_handlers();
 
   /* ADD INITIALIZATION CODE FOR INTERRUPT VECTOR */
- setInterruptHandler(32, clock_handler, 0);
- setInterruptHandler(33, keyboard_handler, 0);
+
+  //Hardware interrupts
+  setInterruptHandler(32, clock_handler, 0);
+  setInterruptHandler(33, keyboard_handler, 0);
+  
+  //Syscalls
+  setTrapHandler(0x80, system_call_handler, 3);
+ 
   set_idt_reg(&idtR);
 }
 
