@@ -75,11 +75,16 @@ void setTrapHandler(int vector, void (*handler)(), int maxAccessibleFromPL)
 
 void clock_handler(void);
 void keyboard_handler(void);
-void system_call_handler(void);
+void syscall_handler_sysenter(void);
+void writeMSR(long int msr_reg, long int hight_part, long int low_part);
+
+zeos_ticks=0;
 
 void clock_routine(){
+	++zeos_ticks;
 	zeos_show_clock();
 }
+
 
 void keyboard_routine(){
 	char value = inb(0x60);
@@ -96,16 +101,17 @@ void setIdt()
   set_handlers();
 
   /* Seteamos tres registros MSR */
-  mbr( 0x174, 0x0, __KERNEL_CS); 		//Code segment 
-  mbr( 0x175, 0x0, INITIAL_ESP); 		//System stack
-  mbr( 0x176, 0x0, system_call_handler); 	//System entry point
+  writeMSR( 0x174, 0x0, __KERNEL_CS); 			//Code segment 
+  writeMSR( 0x175, 0x0, INITIAL_ESP); 			//System stack
+  writeMSR( 0x176, 0x0, syscall_handler_sysenter); 	//System entry point
 
   /* ADD INITIALIZATION CODE FOR INTERRUPT VECTOR */
 
   //Hardware interrupts
   setInterruptHandler(32, clock_handler, 0);
   setInterruptHandler(33, keyboard_handler, 0);
-   
+  
+  
   set_idt_reg(&idtR);
 }
 

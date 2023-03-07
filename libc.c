@@ -7,7 +7,9 @@
 #include <types.h>
 
 int errno;
-void write(int fd, char *buffer, int size);
+int write(int fd, char *buffer, int size);
+void perror(void);
+int gettime();
 
 void itoa(int a, char *b)
 {
