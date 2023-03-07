@@ -23,6 +23,7 @@ ENTRY(write) #Wrapper de write
 	#Guardamos la dirección de retorno del user mode y fake dynamic link
 	pushl $wr_return_usr
 	
+	#Fake dynamic link
 	pushl %ebp
 	movl %esp, %ebp
 
@@ -63,16 +64,20 @@ ENTRY(gettime)
 
         #Guardamos la dirección de retorno del user mode y fake dynamic link
         pushl $gt_return_usr
-        leave
-	
+        
+	#Fake dynamic link
+	pushl %ebp
+        movl %esp, %ebp
+
 	sysenter
 
 gt_return_usr:
 	
-	popl %ebp
-	addl $0x04, %ebp
-	popl %edx
-	popl %ecx
+	#Popeamos de la pila los datos temporales
+        leave
+        addl $0x04, %esp
+        popl %edx
+        popl %ecx
 
 	#Comprobamos si el valor de retorno es mayor o igual que 0
         cmpl $0, %eax

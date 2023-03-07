@@ -90,9 +90,11 @@ void keyboard_routine(){
 }
 
 void pf_routine(int flags, int eip) {
-	char bff[8];
-	itoa(eip,bff);	
-	printk(bff);	
+	char bff[10];
+	itoa(eip,bff);
+	printk("PAGE FAULT exception at EIP: ");
+	printk(bff);
+	while(1);
 }
 
 
