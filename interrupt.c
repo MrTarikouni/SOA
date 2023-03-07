@@ -6,6 +6,8 @@
 #include <segment.h>
 #include <hardware.h>
 #include <io.h>
+#include <libc.h>
+#include <system.h>
 
 #include <zeos_interrupt.h>
 
@@ -73,10 +75,6 @@ void setTrapHandler(int vector, void (*handler)(), int maxAccessibleFromPL)
   idt[vector].highOffset      = highWord((DWord)handler);
 }
 
-void clock_handler(void);
-void keyboard_handler(void);
-void syscall_handler_sysenter(void);
-void writeMSR(long int msr_reg, long int hight_part, long int low_part);
 
 zeos_ticks=0;
 
@@ -89,6 +87,12 @@ void clock_routine(){
 void keyboard_routine(){
 	char value = inb(0x60);
 	if (!(value & 0x80)) printc(char_map[value & 0x7F]);
+}
+
+void pf_routine(int flags, int eip) {
+	char bff[8];
+	itoa(eip,bff);	
+	printk(bff);	
 }
 
 
@@ -110,6 +114,7 @@ void setIdt()
   //Hardware interrupts
   setInterruptHandler(32, clock_handler, 0);
   setInterruptHandler(33, keyboard_handler, 0);
+  setInterruptHandler(14, pf_handler, 0);
   
   
   set_idt_reg(&idtR);

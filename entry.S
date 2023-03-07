@@ -107,4 +107,9 @@ sysenter_fin:
 	movl (%ESP), %EDX 		// Return address
 	movl 12(%ESP), %ECX 		// User stack address
 	sti 				// Enable interrupts again
-	sysexit	
+	sysexit
+
+ENTRY(pf_handler) 
+	call pf_routine
+	iret
+	

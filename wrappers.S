@@ -23,12 +23,15 @@ ENTRY(write) #Wrapper de write
 	#Guardamos la dirección de retorno del user mode y fake dynamic link
 	pushl $wr_return_usr
 	
+	pushl %ebp
+	movl %esp, %ebp
 
 	sysenter
 
 wr_return_usr:
 	
 	#Popeamos de la pila los datos temporales
+	leave
 	addl $0x04, %esp
 	popl %edx
 	popl %ecx
