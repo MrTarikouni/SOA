@@ -16,7 +16,7 @@ void setTrapHandler(int vector, void (*handler)(), int maxAccessibleFromPL);
 
 void setIdt();
 
-extern int zeos_ticks;
+extern unsigned int zeos_ticks;
 
 /* Definición de handlers */
 void clock_handler(void);

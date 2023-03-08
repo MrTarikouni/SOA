@@ -76,7 +76,7 @@ void setTrapHandler(int vector, void (*handler)(), int maxAccessibleFromPL)
 }
 
 
-zeos_ticks=0;
+unsigned int zeos_ticks=0;
 
 void clock_routine(){
 	++zeos_ticks;

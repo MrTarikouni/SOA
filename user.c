@@ -12,11 +12,10 @@ int __attribute__ ((__section__(".text.main")))
 
   
   write(1,"hola\n",5);
-  
 
-  char *buffer;
+  char *buffer = "\0\0\0\0\0\0\0\0\0\n";
   itoa(gettime(), buffer);
-  write(1,buffer,strlen(buffer));
-  
+  write(1, buffer, 10);
+
   while(1) {}
 }

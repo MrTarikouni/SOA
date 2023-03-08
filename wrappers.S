@@ -6,8 +6,6 @@ ENTRY(write) #Wrapper de write
 	pushl %ebp
 	movl %esp, %ebp
 
-	pushl %ebx
-	
 	#Pasamos los parámetros a los registros
 	movl 0x08(%ebp), %ebx
 	movl 0x0c(%ebp), %ecx
