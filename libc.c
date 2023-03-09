@@ -11,7 +11,7 @@ int errno;
 void perror() {
 	if (errno == 14) write(1, "Bad address\n", 12);
 	else if (errno == 13) write(1,"Permission denied\n", 18);
-	else if (errno == 9) write(1, "bad file number\n", 16);
+	else if (errno == 9) write(1, "Bad file number\n", 16);
 }
 
 

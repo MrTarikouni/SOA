@@ -93,7 +93,26 @@ void pf_routine(int flags, int eip) {
 	char bff[10];
 	itoa(eip,bff);
 	printk("PAGE FAULT exception at EIP: ");
-	printk(bff);
+  int quotient, remainder;
+  int i, j = 0;
+
+  char tmp[100];
+
+  quotient = eip;
+
+  while (quotient != 0)
+  {
+      remainder = quotient % 16;
+      if (remainder < 10)
+          tmp[j++] = 48 + remainder;
+      else
+          tmp[j++] = 55 + remainder;
+      quotient = quotient / 16;
+  }
+
+	for (i = j; i >= 0; i--){
+    printc(tmp[i]);
+  }
 	while(1);
 }
 
