@@ -11,11 +11,15 @@ int __attribute__ ((__section__(".text.main")))
      /* __asm__ __volatile__ ("mov %0, %%cr3"::"r" (0) ); */
 
   
-  write(1,"hola\n",5);
+  if (write(1,"hola\n",5) < 0) perror();
 
   char *buffer = "\0\0\0\0\0\0\0\0\0\n";
   itoa(gettime(), buffer);
   write(1, buffer, 10);
+
+  //char *p=0;
+  //*p = 'x';
+
 
   while(1) {}
 }
