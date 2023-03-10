@@ -1,0 +1,12 @@
+# Ignora todos los .o
+*.o
+
+# Ignora todos los .s
+*.s 
+
+# Configs, archivos de texto ...
+bochsout.txt parport.out system.out user.out 
+
+# Ejecutables
+system bootsect zeos.bin user *~ build
+
