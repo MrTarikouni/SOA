@@ -86,7 +86,7 @@ void clock_routine(){
 
 void keyboard_routine(){
 	char value = inb(0x60);
-	if (!(value & 0x80)) printc(char_map[value & 0x7F]);
+	if (!(value & 0x80)) printc(char_map[value & 0x7F]); //Si el primer bit no está activo (Make), se escribe el código ASCII de los últimos 7 								//bits
 }
 
 void pf_routine(int flags, int eip) {
@@ -100,7 +100,7 @@ void pf_routine(int flags, int eip) {
 
   quotient = eip;
 
-  while (quotient != 0)
+  while (quotient != 0) 	//Decimal a hexadecimal
   {
       remainder = quotient % 16;
       if (remainder < 10)
@@ -123,14 +123,12 @@ void setIdt()
 
   set_handlers();
 
-  /* Seteamos tres registros MSR */
+  /* Seteamos tres registros MSR para las fast interrupts*/
   writeMSR( 0x174, 0x0, __KERNEL_CS); 			//Code segment 
   writeMSR( 0x175, 0x0, INITIAL_ESP); 			//System stack
   writeMSR( 0x176, 0x0, syscall_handler_sysenter); 	//System entry point
 
   /* ADD INITIALIZATION CODE FOR INTERRUPT VECTOR */
-
-  //Hardware interrupts
   setInterruptHandler(32, clock_handler, 0);
   setInterruptHandler(33, keyboard_handler, 0);
   setInterruptHandler(14, pf_handler, 0);
