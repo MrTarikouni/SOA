@@ -90,9 +90,9 @@ void keyboard_routine(){
 }
 
 void pf_routine(int flags, int eip) {
-	char bff[10];
-	itoa(eip,bff);
-	printk("PAGE FAULT exception at EIP: ");
+  char bff[10];
+  itoa(eip,bff);
+  printk("PAGE FAULT exception at EIP: 0x");
   int quotient, remainder;
   int i, j = 0;
 
@@ -109,11 +109,9 @@ void pf_routine(int flags, int eip) {
           tmp[j++] = 55 + remainder;
       quotient = quotient / 16;
   }
-
-	for (i = j; i >= 0; i--){
-    printc(tmp[i]);
-  }
-	while(1);
+  for (int w = j; 8-w != 0; ++w) printc('0');
+  for (i = j-1; i >= 0; i--) printc(tmp[i]);
+  while(1);
 }
 
 
