@@ -58,19 +58,7 @@ int sys_write(int fd, char *buffer, int size)
   int res_access = access_ok(VERIFY_WRITE,buffer,size); 
   if (!res_access) return -EFAULT;
 
-  if (size < 0) return -EFAULT;
-
-/*
-  while (size > BUFF_SIZE) {	//Los bytes a escribir son mayores que el tamaño del buffer 
-	  if (copy_from_user(buffer,buff,BUFF_SIZE)) return -EFAULT;
-	  bytes_escritos += sys_write_console(buff,BUFF_SIZE);	//Se escriben los bytes que caben en el buffer
-	  
-	  buffer = buffer+BUFF_SIZE;
-	  size = size-BUFF_SIZE;	//Se inicializa el buffer para escribir los bytes restantes
-  
-  }
-
-*/
+  if (size < 0) return -EFAULT;	  
 
   if (copy_from_user(buffer, buff, size)) return -EFAULT;
   bytes_escritos += sys_write_console(buff,size);
