@@ -14,3 +14,30 @@ ENTRY(writeMSR)
 	popl %ebp
 	ret
 
+
+ENTRY(task_switch)
+	push %ebp
+	movl %esp, %ebp
+
+	pushl %esi
+	pushl %edi
+	push %ebx
+	
+	pushl $ts_ret
+	
+	push %ebp
+	movl %esp, %ebp
+
+	call inner_task_switch
+ts_ret:
+	leave
+	addl $0x04, $esp
+
+	popl %ebx
+	popl %edi
+	popl %esi
+	
+	leave
+	ret
+	
+

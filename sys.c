@@ -60,7 +60,7 @@ int sys_write(int fd, char *buffer, int size)
 
   if (size < 0) return -EFAULT;	  
 
-  if (copy_from_user(buffer, buff, size)) return -EFAULT;
+  if (copy_from_user(buffer, buff, size)) return -EFAULT; 
   bytes_escritos += sys_write_console(buff,size);
   
   return bytes_escritos;

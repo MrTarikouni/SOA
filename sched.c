@@ -65,7 +65,13 @@ void init_task1(void)
 
 void init_sched()
 {
-
+	struct list_head *freequeue;
+	struct list_head *readyqueue;
+	
+	for (int i = 0; i < NR_TASKS; ++i) 	//Inicializar la freequeue con todos los task_structs.
+		list_add_tail(task[i].task.list,freequeue);
+	
+	INIT_LIST_HEAD(readyqueue); 		//Inicializar la readyqueue vacía
 }
 
 struct task_struct* current()
