@@ -18,25 +18,21 @@ ENTRY(writeMSR)
 ENTRY(task_switch)
 	push %ebp
 	movl %esp, %ebp
+	
+	push 0x08(%ebp)	
 
 	pushl %esi
 	pushl %edi
 	push %ebx
-	
-	pushl $ts_ret
-	
-	push %ebp
-	movl %esp, %ebp
 
 	call inner_task_switch
-ts_ret:
-	leave
-	addl $0x04, $esp
 
 	popl %ebx
 	popl %edi
 	popl %esi
 	
+	addl $0x04, %ebp
+ 
 	leave
 	ret
 

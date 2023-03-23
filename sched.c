@@ -9,7 +9,7 @@
 union task_union task[NR_TASKS]
   __attribute__((__section__(".data.task")));
 
-#if 0
+#if 1
 struct task_struct *list_head_to_task_struct(struct list_head *l)
 {
   return list_entry( l, struct task_struct, list);
@@ -17,6 +17,10 @@ struct task_struct *list_head_to_task_struct(struct list_head *l)
 #endif
 
 extern struct list_head blocked;
+struct list_head freequeue;      /* Freequeue */
+struct list_head readyqueue;     /* Readyqueue */
+
+
 
 /* get_DIR - Returns the Page Directory address for task 't' */
 page_table_entry * get_DIR (struct task_struct *t) 
@@ -52,12 +56,14 @@ void cpu_idle(void)
 	}
 }
 
+struct task_struct *idle_task;
+
 void init_idle (void)
 {
-  struct task_struct *pcb = list_head_to_task_struct(freequeue);	// Cogemos un task struct de la freequeue
+  struct task_struct *pcb = list_head_to_task_struct(&freequeue);	// Cogemos un task struct de la freequeue
   union task_union *tu = &pcb; 
  
-  list_del(freequeue);							// Borramos el task union de la freequeue
+  list_del(&freequeue);							// Borramos el task union de la freequeue
 
   pcb->PID = 0;
   allocate_DIR(pcb);				// Alocatamos el directorion de la tabla de páginas
@@ -81,10 +87,10 @@ void init_idle (void)
 
 void init_task1(void)
 {
-  struct task_struct *pcb = list_head_to_task_struct(freequeue);       	// Cogemos un task struct de la freequeue
+  struct task_struct *pcb = list_head_to_task_struct(&freequeue);       	// Cogemos un task struct de la freequeue
   union task_union *tu = &pcb;
 
-  list_del(freequeue);                                                 // Borramos el task union de la freequeue
+  list_del(&freequeue);                                                 // Borramos el task union de la freequeue
 
   pcb->PID=1;
   allocate_DIR(pcb);
@@ -112,10 +118,10 @@ void init_sched()
 
 void inner_task_switch(union task_union*t){
 
-	page_table_entry *dir = get_DIR(t.task);
+	page_table_entry *dir = get_DIR(&t->task);
 	set_cr3(dir);
-	tss.esp0 = t.stack;
-	writeMSR( 0x175, 0x0, t.stack);
+	tss.esp0 = t->stack[1024];
+	writeMSR( 0x175, 0x0, &t->stack[1024]);
 
 
 }
