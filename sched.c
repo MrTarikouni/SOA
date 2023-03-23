@@ -99,11 +99,25 @@ void init_task1(void)
 
 void init_sched()
 {	
-	INIT_LIST_HEAD(freequeue);	
-	for (int i = 0; i < NR_TASKS; ++i) 	//Inicializar la freequeue con todos los task_structs.
+	struct list_head *freequeue;
+	struct list_head *readyqueue;
+
+	INIT_LIST_HEAD(freequeue);			//Inicializar la freequeue vacia
+	INIT_LIST_HEAD(readyqueue); 			//Inicializar la readyqueue vacía
+	for (int i = 0; i < NR_TASKS; ++i) 		//Inicializar la freequeue con todos los task_structs.
 		list_add_tail(task[i].task.list,freequeue);
 	
-	INIT_LIST_HEAD(readyqueue); 		//Inicializar la readyqueue vacía
+
+}
+
+void inner_task_switch(union task_union*t){
+
+	page_table_entry *dir = get_DIR(t.task);
+	set_cr3(dir);
+	tss.esp0 = t.stack;
+	writeMSR( 0x175, 0x0, t.stack);
+
+
 }
 
 struct task_struct* current()
@@ -116,4 +130,3 @@ struct task_struct* current()
   );
   return (struct task_struct*)(ret_value&0xfffff000);
 }
-
