@@ -18,6 +18,7 @@ struct task_struct {
   int PID; 				     /* Process ID. This MUST be the first field of the struct. */
   struct list_head *list;
   page_table_entry * dir_pages_baseAddr;
+  unsigned long KERNEL_ESP;
 };
 
 union task_union {
@@ -26,7 +27,8 @@ union task_union {
 };
 
 extern union task_union task[NR_TASKS]; /* Vector de tasques */
-
+extern struct list_head *freequeue;	/* Freequeue */
+extern struct list_head *readyqueue;	/* Readyqueue */
 
 #define KERNEL_ESP(t)       	(DWord) &(t)->stack[KERNEL_STACK_SIZE]
 
@@ -36,6 +38,8 @@ extern union task_union task[NR_TASKS]; /* Vector de tasques */
 void init_task1(void);
 
 void init_idle(void);
+
+extern struct task_struct *idle_task;   /* Idel task struct */
 
 void init_sched(void);
 

@@ -18,7 +18,6 @@ struct task_struct *list_head_to_task_struct(struct list_head *l)
 
 extern struct list_head blocked;
 
-
 /* get_DIR - Returns the Page Directory address for task 't' */
 page_table_entry * get_DIR (struct task_struct *t) 
 {
@@ -55,19 +54,52 @@ void cpu_idle(void)
 
 void init_idle (void)
 {
+  struct task_struct *pcb = list_head_to_task_struct(freequeue);	// Cogemos un task struct de la freequeue
+  union task_union *tu = &pcb; 
+ 
+  list_del(freequeue);							// Borramos el task union de la freequeue
 
+  pcb->PID = 0;
+  allocate_DIR(pcb);				// Alocatamos el directorion de la tabla de páginas
+  
+
+
+  /* |           |
+   * |           |
+   * |-----------|
+   * |	   0	 | <----- KERNEL_ESP
+   * |-----------| 	       	
+   * | @cpu_idle |
+   * -------------
+   * */
+  tu->stack[1023]= &cpu_idle;
+  tu->stack[1022]= 0;
+  pcb->KERNEL_ESP= &tu->stack[1022];
+
+  idle_task = pcb; 
 }
 
 void init_task1(void)
 {
+  struct task_struct *pcb = list_head_to_task_struct(freequeue);       	// Cogemos un task struct de la freequeue
+  union task_union *tu = &pcb;
+
+  list_del(freequeue);                                                 // Borramos el task union de la freequeue
+
+  pcb->PID=1;
+  allocate_DIR(pcb);
+
+  set_user_pages(pcb);							
+
+  tss.esp0=&tu->stack[1024];
+  writeMSR(0x175,0x0, (unsigned long)&tu->stack[1024]);
+
+  set_cr3(pcb->dir_pages_baseAddr);
 }
 
-
 void init_sched()
-{
-	struct list_head *freequeue;
-	struct list_head *readyqueue;
-	
+{	
+	INIT_LIST_HEAD(freequeue);	
 	for (int i = 0; i < NR_TASKS; ++i) 	//Inicializar la freequeue con todos los task_structs.
 		list_add_tail(task[i].task.list,freequeue);
 	
