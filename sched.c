@@ -17,8 +17,8 @@ struct task_struct *list_head_to_task_struct(struct list_head *l)
 #endif
 
 extern struct list_head blocked;
-struct list_head *freequeue;      /* Freequeue */
-struct list_head *readyqueue;     /* Readyqueue */
+struct list_head freequeue;      /* Freequeue */
+struct list_head readyqueue;     /* Readyqueue */
 
 /* get_DIR - Returns the Page Directory address for task 't' */
 page_table_entry * get_DIR (struct task_struct *t) 
@@ -58,10 +58,10 @@ struct task_struct *idle_task;
 
 void init_idle (void)
 {
-  struct task_struct *pcb = list_head_to_task_struct(&freequeue);	// Cogemos un task struct de la freequeue
+  struct task_struct *pcb = list_head_to_task_struct(list_first(&freequeue));	// Cogemos un task struct de la freequeue
   union task_union *tu = &pcb; 
  
-  list_del(&freequeue);							// Borramos el task union de la freequeue
+  list_del(&pcb->list);						// Borramos el task union de la freequeue
 
   pcb->PID = 0;
   allocate_DIR(pcb);				// Alocatamos el directorion de la tabla de páginas
@@ -74,7 +74,7 @@ void init_idle (void)
    * |	   0	 | <----- KERNEL_ESP
    * |-----------| 	       	
    * | @cpu_idle |
-   * -------------
+void switch_context(unsigned long* current_kernel_esp, unsigned long* new_kernel_esp);   * -------------
    * */
   tu->stack[1023]= &cpu_idle;
   tu->stack[1022]= 0;
@@ -83,34 +83,33 @@ void init_idle (void)
   idle_task = pcb; 
 }
 
+struct task_struct *init_task;
+
 void init_task1(void)
 {
-  struct task_struct *pcb = list_head_to_task_struct(&freequeue);       	// Cogemos un task struct de la freequeue
-  union task_union *tu = &pcb;
+  init_task = list_head_to_task_struct(list_first(&freequeue));       	// Cogemos un task struct de la freequeue
+  union task_union *tu = (union task_union*)init_task;
 
-  list_del(&freequeue);                                                 // Borramos el task union de la freequeue
+  list_del(&init_task->list);                                                 // Borramos el task union de la freequeue
 
-  pcb->PID=1;
-  allocate_DIR(pcb);
+  init_task->PID=1;
+  allocate_DIR(init_task);
 
-  set_user_pages(pcb);							
+  set_user_pages(init_task);							
 
   tss.esp0=&tu->stack[1024];
   writeMSR(0x175,0x0, (unsigned long)&tu->stack[1024]);
 
-  set_cr3(pcb->dir_pages_baseAddr);
+  set_cr3(get_DIR(init_task));
 }
 
 void init_sched()
 {	
-	INIT_LIST_HEAD(freequeue);			//Inicializar la freequeue vacia
-	INIT_LIST_HEAD(readyqueue); 			//Inicializar la readyqueue vacía
+	INIT_LIST_HEAD(&freequeue);			//Inicializar la freequeue vacia
+	INIT_LIST_HEAD(&readyqueue); 			//Inicializar la readyqueue vacía
 	for (int i = 0; i < NR_TASKS; ++i) 		//Inicializar la freequeue con todos los task_structs.
-		list_add_tail(task[i].task.list,freequeue);
+		list_add(&task[i].task.list,&freequeue);
 }
-
-void switch_context(unsigned long* current_kernel_esp, unsigned long* new_kernel_esp);
-
 
 
 void inner_task_switch(union task_union*t){

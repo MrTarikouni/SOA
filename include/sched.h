@@ -43,6 +43,8 @@ void init_sched(void);
 
 struct task_struct * current();
 
+void switch_context(unsigned long* current_kernel_esp, unsigned long* new_kernel_esp);
+
 void task_switch(union task_union*t);
 
 void inner_task_switch(union task_union*t);
