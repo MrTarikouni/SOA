@@ -17,10 +17,8 @@ struct task_struct *list_head_to_task_struct(struct list_head *l)
 #endif
 
 extern struct list_head blocked;
-struct list_head freequeue;      /* Freequeue */
-struct list_head readyqueue;     /* Readyqueue */
-
-
+struct list_head *freequeue;      /* Freequeue */
+struct list_head *readyqueue;     /* Readyqueue */
 
 /* get_DIR - Returns the Page Directory address for task 't' */
 page_table_entry * get_DIR (struct task_struct *t) 
@@ -105,24 +103,23 @@ void init_task1(void)
 
 void init_sched()
 {	
-	struct list_head *freequeue;
-	struct list_head *readyqueue;
-
 	INIT_LIST_HEAD(freequeue);			//Inicializar la freequeue vacia
 	INIT_LIST_HEAD(readyqueue); 			//Inicializar la readyqueue vacía
 	for (int i = 0; i < NR_TASKS; ++i) 		//Inicializar la freequeue con todos los task_structs.
 		list_add_tail(task[i].task.list,freequeue);
-	
-
 }
+
+void switch_context(unsigned long* current_kernel_esp, unsigned long* new_kernel_esp);
+
+
 
 void inner_task_switch(union task_union*t){
 
 	page_table_entry *dir = get_DIR(&t->task);
 	set_cr3(dir);
 	tss.esp0 = t->stack[1024];
-	writeMSR( 0x175, 0x0, &t->stack[1024]);
-
+	writeMSR( 0x175, 0x0, t->stack[1024]);
+	switch_context(current()->KERNEL_ESP, t->task.KERNEL_ESP);
 
 }
 

@@ -36,6 +36,18 @@ ENTRY(task_switch)
 	leave
 	ret
 
+ENTRY(switch_context)
+	push %ebp, %esp
+	movl %esp, %ebp
+
+	movl %ebp, 0x08(%ebp)
+	movl 0x0C(%ebp), %esp
+
+	popl %ebp
+	ret
+
+
+
 
 	
 
