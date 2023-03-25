@@ -78,7 +78,7 @@ void init_idle (void)
    * */
   tu->stack[1023]= &cpu_idle;
   tu->stack[1022]= 0;
-  pcb->KERNEL_ESP= &tu->stack[1022];
+  pcb->kernel_esp= &tu->stack[1022];
 
   idle_task = pcb; 
 }
@@ -119,7 +119,7 @@ void inner_task_switch(union task_union*t){
 	set_cr3(dir);
 	tss.esp0 = t->stack[1024];
 	writeMSR( 0x175, 0x0, t->stack[1024]);
-	switch_context(current()->KERNEL_ESP, t->task.KERNEL_ESP);
+	switch_context(current()->kernel_esp, t->task.kernel_esp);
 
 }
 
