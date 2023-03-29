@@ -17,7 +17,6 @@ int __attribute__ ((__section__(".text.main")))
   itoa(gettime(), buffer);
   write(1, buffer, 10);
 
-  //task_switch((union task_union*)idle_task);
 
   /* char *p=0;
   *p = 'x'; */	

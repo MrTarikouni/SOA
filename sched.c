@@ -58,13 +58,13 @@ struct task_struct *idle_task;
 
 void init_idle (void)
 {
-  struct task_struct *pcb = list_head_to_task_struct(list_first(&freequeue));	// Cogemos un task struct de la freequeue
-  union task_union *tu = &pcb; 
+  idle_task = list_head_to_task_struct(list_first(&freequeue));		// Cogemos un task struct de la freequeue
+  union task_union *tu_idle = &idle_task; 
  
-  list_del(&pcb->list);						// Borramos el task union de la freequeue
+  list_del(&idle_task->list);						// Borramos el task union de la freequeue
 
-  pcb->PID = 0;
-  allocate_DIR(pcb);				// Alocatamos el directorion de la tabla de páginas
+  idle_task->PID = 0;
+  allocate_DIR(idle_task);						// Alocatamos el directorion de la tabla de páginas
   
 
 
@@ -74,33 +74,33 @@ void init_idle (void)
    * |	   0	 | <----- KERNEL_ESP
    * |-----------| 	       	
    * | @cpu_idle |
-void switch_context(unsigned long* current_kernel_esp, unsigned long* new_kernel_esp);   * -------------
+   * -------------
    * */
-  tu->stack[1023]= &cpu_idle;
-  tu->stack[1022]= 0;
-  pcb->kernel_esp= &tu->stack[1022];
-
-  idle_task = pcb; 
+  tu_idle->stack[1023]= &cpu_idle;
+  tu_idle->stack[1022]= 0;
+  idle_task->kernel_esp= &tu_idle->stack[1022];
 }
 
 struct task_struct *init_task;
 
 void init_task1(void)
 {
-  init_task = list_head_to_task_struct(list_first(&freequeue));       	// Cogemos un task struct de la freequeue
-  union task_union *tu = (union task_union*)init_task;
+  init_task = list_head_to_task_struct(list_first(&freequeue));       		// Cogemos un task struct de la freequeue
+  union task_union *tu_init = (union task_union*)init_task;
 
-  list_del(&init_task->list);                                                 // Borramos el task union de la freequeue
+  list_del(&init_task->list);                      		                // Borramos el task union de la freequeue
 
   init_task->PID=1;
   allocate_DIR(init_task);
 
   set_user_pages(init_task);							
 
-  tss.esp0=&tu->stack[1024];
-  writeMSR(0x175,0x0, (unsigned long)&tu->stack[1024]);
+  tss.esp0=&tu_init->stack[1024];
+  writeMSR(0x175,0x0, (unsigned long)&tu_init->stack[1024]);
 
   set_cr3(get_DIR(init_task));
+
+  printk("n/INIT LOADED/n");
 }
 
 void init_sched()
@@ -118,8 +118,7 @@ void inner_task_switch(union task_union*t){
 	set_cr3(dir);
 	tss.esp0 = t->stack[1024];
 	writeMSR( 0x175, 0x0, t->stack[1024]);
-	switch_context(current()->kernel_esp, t->task.kernel_esp);
-
+	switch_context(&current()->kernel_esp, t->task.kernel_esp);
 }
 
 struct task_struct* current()

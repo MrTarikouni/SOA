@@ -39,6 +39,8 @@ void init_idle(void);
 
 extern struct task_struct *idle_task;   /* Idel task struct */
 
+extern struct task_struct *init_task;    /* Init task struct */
+
 void init_sched(void);
 
 struct task_struct * current();

@@ -36,11 +36,11 @@ ENTRY(task_switch)
 	leave
 	ret
 
+
 ENTRY(switch_context)
-	movl 0x04(%ebp), %eax
+	movl 0x04(%esp), %eax
 	movl %ebp, (%eax)
-	movl 0x08(%ebp), %eax
-	movl (%eax), %esp
+	movl 0x08(%esp), %esp
 	
 	popl %ebp
 	ret

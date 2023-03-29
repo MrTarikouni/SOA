@@ -111,5 +111,4 @@ sysenter_fin:
 
 ENTRY(pf_handler) 
 	call pf_routine
-	iret
 	
