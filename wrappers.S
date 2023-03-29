@@ -89,3 +89,38 @@ gt_end:
         leave
         ret
 
+ENTRY(fork)
+	pushl %ebp
+	movl %esp, %ebp
+
+	movl $0x02, %eax
+
+	pushl %ecx
+	pushl %edx
+
+	pushl fk_return_usr
+
+	push %ebp
+	movl %esp, %ebp
+
+	systenter
+
+fk_return_usr:
+		
+		leave
+		addl $0x04, %esp
+		popl %edx
+		popl %ecx
+
+		cmpl $0, %eax
+		jge fk_end
+
+		negl %eax
+		movl %eax, errno
+		movl $-1, %eax
+fk_end:
+		
+		leave
+		ret
+
+
