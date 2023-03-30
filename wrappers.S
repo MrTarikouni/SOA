@@ -13,14 +13,14 @@ ENTRY(write) #Wrapper de write
 
 	#Guardamos el id de la syscall en eax
 	movl $0x04, %eax
- 	
+
 	#Salvamos ecx y edx para que no los sobreescriba la dirección de retorno de sysexit
 	pushl %ecx
 	pushl %edx
-	
+
 	#Guardamos la dirección de retorno del user mode y fake dynamic link
 	pushl $wr_return_usr
-	
+
 	#Fake dynamic link
 	pushl %ebp
 	movl %esp, %ebp
@@ -28,21 +28,21 @@ ENTRY(write) #Wrapper de write
 	sysenter
 
 wr_return_usr:
-	
+
 	#Popeamos de la pila los datos temporales
 	leave
 	addl $0x04, %esp
 	popl %edx
 	popl %ecx
-	
+
 	#Comprobamos si el valor de retorno es mayor o igual que 0
 	cmpl $0, %eax
 	jge wr_end
-	
+
 	#Si no lo es, lo devolvemos como error en valor absoluto
 	negl %eax
 	movl %eax, errno
-	movl $-1, %eax	
+	movl $-1, %eax
 wr_end:
 	leave
 	ret
@@ -55,14 +55,14 @@ ENTRY(gettime)
 
 	#Guardamos el id de la syscall en eax
         movl $0x0A, %eax
-	
+
 	#Salvamos ecx y edx para que no los sobreescriba la dirección de retorno de sysexit
         pushl %ecx
         pushl %edx
 
         #Guardamos la dirección de retorno del user mode y fake dynamic link
         pushl $gt_return_usr
-        
+
 	#Fake dynamic link
 	pushl %ebp
         movl %esp, %ebp
@@ -70,7 +70,7 @@ ENTRY(gettime)
 	sysenter
 
 gt_return_usr:
-	
+
 	#Popeamos de la pila los datos temporales
         leave
         addl $0x04, %esp
@@ -88,4 +88,43 @@ gt_return_usr:
 gt_end:
         leave
         ret
+
+
+ENTRY(fork)
+
+        pushl %ebp
+        movl %esp, %ebp
+
+        movl $0x02, %eax
+
+        pushl %edx
+        pushl %ecx
+
+        pushl $return_fork
+
+        pushl %ebp
+        movl %esp, %ebp
+
+        sysenter
+
+return_fork:
+
+        popl %ebp
+
+        add $0x04, %esp
+
+        popl %ecx
+        popl %edx
+
+        cmpl $0, %eax
+        jge fork_end
+
+        negl %eax
+        movl %eax, errno
+        movl $-1, %eax
+fork_end:
+        popl %ebp
+        ret
+
+
 
