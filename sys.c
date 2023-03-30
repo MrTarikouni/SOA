@@ -34,7 +34,26 @@ int sys_fork()
 {
   int PID=-1;
 
-  // creates the child process
+  if (list_empty(&freequeue) != 1) return -ENOMEM;
+
+  struct list_head *lh_hijo = list_first(&freequeue);
+  list_del(lh_hijo);
+
+  struct task_struct *ts_hijo = list_head_to_task_struct(lh_hijo);
+  union task_union *union_hijo= (union task_union*) ts_hijo;
+  copy_data(current(), union_hijo,sizeof(union task_union));
+
+  dir_pages_baseAddr = 
+
+  if (allocate_DIR(ts_hijo) != 1){
+    list_add(ts_hijo.list,&freequeue);
+    return -ENOMEM
+  }
+
+  
+
+
+ 
   
   return PID;
 }
