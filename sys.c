@@ -30,54 +30,120 @@ int sys_getpid()
 	return current()->PID;
 }
 
+int ret_from_fork() {
+    return 0;
+}
+
 
 /* Buscamos las páginas en las que mapear las páginas lógicas del hijo */
 int allocate_frames(int *frames[], struct task_struct *ts_hijo) {
     for (int i = 0; i < NUM_PAG_DATA; ++i) {
         if (frames[i]=alloc_frame() < 0) {
             for (int j = 0; j < i; ++j) free_frame(frames[j]);
-            list_add(&ts_hijo>list);
-            return -ENUMEM;
+            list_add(&ts_hijo->list, &freequeue);
+            return -ENOMEM;
         }//
     }
     return 1;
 }
 
+/* Copia la user data+stak del padre al hijo */
+void copy_pag_data(page_table_entry *TP_padre, page_table_entry *TP_hijo) {
+    for (int i = 0; i < NUM_PAG_DATA; ++i) {
+        /* mapeamos la página física del hijo en la página lógica del padre de la región vacía de la TP */
+        set_ss_pag(TP_padre, i+PAG_LOG_INIT_CODE+NUM_PAG_CODE, get_frame(TP_hijo, i+PAG_LOG_INIT_DATA));
+        /* copiamos los datos con los mapeos que tenemos en la TP del padre */
+        copy_data((i+PAG_LOG_INIT_DATA << 12), (i+PAG_LOG_INIT_CODE+NUM_PAG_CODE << 12), PAGE_SIZE);
+        /* liberamos la página lógica de la TP del padre que mapeaba la página física del hijo */
+        del_ss_pag(TP_padre, i+PAG_LOG_INIT_CODE+NUM_PAG_CODE);
+    }
+
+}
+
+unsigned int pid_count = 1;
 
 int sys_fork()
 {
-  int PID=-1;i
-
   struct task_struct* pcb_hijo;
-
-  if (list_empty(&freequeue)) return -EFAULT;                       // Retornamos error si la freequeue está vacía
+  // Retornamos error si la freequeue está vacía
+  if (list_empty(&freequeue)) return -EFAULT;
   pcb_hijo = list_head_to_task_struct(list_first(&freequeue));
   list_del(&pcb_hijo->list);
 
-  if (allocate_DIR(pcb_hijo) == -1) {                               // Asignamos TP al hijo
-      list_add(&freequeue, pcb_hijo);
+  // Asignamos TP al hijo
+  if (allocate_DIR(pcb_hijo) == -1) {
+      list_add(&pcb_hijo->list, &freequeue);
       return -EFAULT;
   }
-  copy_data(current(),pcb_hijo,sizeof(union task_union));           // Copiamos el PCB del padre al hijo
+  // Copiamos el PCB del padre al hijo
+  copy_data(current(),pcb_hijo,sizeof(union task_union));
 
   union task_union *tu_hijo = (union task_union*) pcb_hijo;
 
-  int frames[NUM_PAGE_DATA];                                        // Páginas físicas  padre de user data+stack
+  // Páginas físicas  padre de user data+stack
+  int frames[NUM_PAG_DATA], res;
   if (res = allocate_frames(&frames, tu_hijo) < 0) return res;
 
   page_table_entry *TP_padre = get_PT(current()), *TP_hijo = get_PT(&pcb_hijo);
-  for (int i = 0; i < NUM_PAGE_KERNEL; ++i)                         // Mismas direcciones del KERNEL de la TP del hijo y del padre
-      set_ss_page(TP_hijo, i, get_frame(TP_padre,i));
+  // Mismas direcciones del KERNEL de la TP del hijo y del padre
+  for (int i = 0; i < NUM_PAG_KERNEL; ++i)
+      set_ss_pag(TP_hijo, i, get_frame(TP_padre,i));
+  // Las direcciones del código de usuario también se comparten
   for (int i = PAG_LOG_INIT_CODE; i < NUM_PAG_CODE; ++i)
-      set_ss_page(TP_hijo, i, get_frame(TP_padre,i));               // Las direcciones del código de usuario también se comparten
+      set_ss_pag(TP_hijo, i, get_frame(TP_padre,i));
 
 
-  for (int i = PAG_LOG_INIT_DATA, i < NUM_PAG_DATA; ++i)            // Entradas de la user data+stack que apuntan a las nuevas
-      set_ss_page(TP_hijo, i, frames[i]));                          // páginas alocatadas
+  // Entradas de la user data+stack que apuntan a las NUM_PAG_DATA
+  for (int i = PAG_LOG_INIT_DATA; i < NUM_PAG_DATA; ++i)
+      set_ss_pag(TP_hijo, i, frames[i]);
 
+  copy_pag_data(&TP_padre, &TP_hijo);
 
+  // Flush TLB para que el padre no las traducciones del hijo
+  set_cr3(get_DIR(current()));
+  // Asignamos un PID=PID del anterior proceso creado +1
+  pcb_hijo->PID=++pid_count;
 
-  return PID;
+/*
+
+   PILA DE SISTEMA HIJO:
+
+    POS
+           -------------
+   1005 -> |     0     | <--- "EBP"
+           -------------
+   1006 -> |@ret_f_fork|
+           -------------
+   1007    |  @handler |
+           -------------\
+   1008 -> |    EBX    | \
+           -------------  \
+           |    ....   |   \
+           -------------   /--> Ctxt sw
+           |    FS     |  /
+           ------------- /
+   1018 -> |    GS     |/
+           -------------\
+           |    EIP    | \
+           -------------  \
+           |    CS     |   \
+           -------------    \
+           |    PSW    |     \--> Ctxt hw
+           -------------    /
+   1022 -> |    ESP    |   /
+           -------------  /
+   1023 -> |    SS     | /
+           -------------/
+*/
+
+  tu_hijo->stack[1005]=0;
+  tu_hijo->stack[1006]=&ret_from_fork;
+  pcb_hijo->kernel_esp=tu_hijo->stack[1005];
+
+  // añadimos al hijo en la readyqueue
+  list_add_tail(&pcb_hijo->list, &readyqueue);
+
+  return pcb_hijo->PID;
 }
 
 void sys_exit()
