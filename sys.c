@@ -84,7 +84,7 @@ int sys_fork()
   int frames[NUM_PAG_DATA], res;
   if (res = allocate_frames(&frames, tu_hijo) < 0) return res;
 
-  page_table_entry *TP_padre = get_PT(current()), *TP_hijo = get_PT(&pcb_hijo);
+  page_table_entry *TP_padre = get_PT(current()), *TP_hijo = get_PT(pcb_hijo);
   // Mismas direcciones del KERNEL de la TP del hijo y del padre
   for (int i = 0; i < NUM_PAG_KERNEL; ++i)
       set_ss_pag(TP_hijo, i, get_frame(TP_padre,i));
@@ -97,7 +97,7 @@ int sys_fork()
   for (int i = PAG_LOG_INIT_DATA; i < NUM_PAG_DATA; ++i)
       set_ss_pag(TP_hijo, i, frames[i]);
 
-  copy_pag_data(&TP_padre, &TP_hijo);
+  copy_pag_data(TP_padre, TP_hijo);
 
   // Flush TLB para que el padre no las traducciones del hijo
   set_cr3(get_DIR(current()));
