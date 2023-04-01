@@ -17,7 +17,9 @@ int __attribute__ ((__section__(".text.main")))
   itoa(gettime(), buffer);
   write(1, buffer, 10);
 
-  fork();
+  int pid = fork();
+  itoa(pid, buffer);
+  write(1,buffer,strlen(buffer));
   /* char *p=0;
   *p = 'x'; */
   while(1) {}

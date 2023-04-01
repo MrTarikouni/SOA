@@ -8,6 +8,7 @@
 #include <io.h>
 #include <libc.h>
 #include <system.h>
+#include <sched.h>
 
 #include <zeos_interrupt.h>
 
@@ -79,6 +80,8 @@ void setTrapHandler(int vector, void (*handler)(), int maxAccessibleFromPL)
 unsigned int zeos_ticks=0;
 
 void clock_routine(){
+   /* if (zeos_ticks % 500 == 0) task_switch((union task_union *)idle_task);
+    else if (zeos_ticks % 700 == 0) task_switch((union task_union*)init_task); */
 	++zeos_ticks;
 	zeos_show_clock();
 }
@@ -124,7 +127,7 @@ void setIdt()
   set_handlers();
 
   /* Seteamos tres registros MSR para las fast interrupts*/
-  writeMSR( 0x174, 0x0, __KERNEL_CS); 			//Code segment 
+  writeMSR( 0x174, 0x0, __KERNEL_CS); 			//Code segment
   writeMSR( 0x175, 0x0, INITIAL_ESP); 			//System stack
   writeMSR( 0x176, 0x0, syscall_handler_sysenter); 	//System entry point
 
@@ -132,8 +135,8 @@ void setIdt()
   setInterruptHandler(32, clock_handler, 0);
   setInterruptHandler(33, keyboard_handler, 0);
   setInterruptHandler(14, pf_handler, 0);
-  
-  
+
+
   set_idt_reg(&idtR);
 }
 

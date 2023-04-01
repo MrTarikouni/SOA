@@ -109,7 +109,7 @@ ENTRY(fork)
 
 return_fork:
 
-        popl %ebp
+        leave
 
         add $0x04, %esp
 

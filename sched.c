@@ -46,8 +46,8 @@ int allocate_DIR(struct task_struct *t)
 
 void cpu_idle(void)
 {
-	__asm__ __volatile__("sti": : :"memory");
-
+    printk("ESTOY EN IDLE");
+    __asm__ __volatile__("sti": : :"memory");
 	while(1)
 	{
 	;
@@ -59,7 +59,7 @@ struct task_struct *idle_task;
 void init_idle (void)
 {
   idle_task = list_head_to_task_struct(list_first(&freequeue));		// Cogemos un task struct de la freequeue
-  union task_union *tu_idle = &idle_task;
+  union task_union *tu_idle = idle_task;
 
   list_del(&idle_task->list);						// Borramos el task union de la freequeue
 
@@ -76,7 +76,7 @@ void init_idle (void)
    * | @cpu_idle |
    * -------------
    * */
-  tu_idle->stack[1023]= &cpu_idle;
+  tu_idle->stack[1023]= cpu_idle;
   tu_idle->stack[1022]= 0;
   idle_task->kernel_esp= &tu_idle->stack[1022];
 }
@@ -96,7 +96,8 @@ void init_task1(void)
   set_user_pages(init_task);
 
   tss.esp0=&tu_init->stack[1024];
-  writeMSR(0x175,0x0, (unsigned long)&tu_init->stack[1024]);
+
+  writeMSR(0x175,0x0, &tu_init->stack[1024]);
 
   set_cr3(get_DIR(init_task));
 }
@@ -106,16 +107,16 @@ void init_sched()
 	INIT_LIST_HEAD(&freequeue);			//Inicializar la freequeue vacia
 	INIT_LIST_HEAD(&readyqueue); 			//Inicializar la readyqueue vacía
 	for (int i = 0; i < NR_TASKS; ++i) 		//Inicializar la freequeue con todos los task_structs.
-		list_add(&task[i].task.list,&freequeue);
+		list_add_tail(&task[i].task.list,&freequeue);
 }
 
 
 void inner_task_switch(union task_union*t){
-
+    printk("CAMBIANDO PROCESO");
 	page_table_entry *dir = get_DIR(&t->task);
-	set_cr3(dir);
-	tss.esp0 = t->stack[1024];
-	writeMSR( 0x175, 0x0, t->stack[1024]);
+    tss.esp0 = &t->stack[1024];
+    writeMSR( 0x175, 0x0, &t->stack[1024]);
+    set_cr3(dir);
 	switch_context(&current()->kernel_esp, t->task.kernel_esp);
 }
 

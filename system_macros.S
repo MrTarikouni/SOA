@@ -9,7 +9,7 @@ ENTRY(writeMSR)
 	movl 0x10(%ebp), %eax		#ecx, edx, eax
 
 	wrmsr
-	
+
 	movl %ebp, %esp
 	popl %ebp
 	ret
@@ -18,21 +18,21 @@ ENTRY(writeMSR)
 ENTRY(task_switch)
 	push %ebp
 	movl %esp, %ebp
-	
-	push 0x08(%ebp)	
 
 	pushl %esi
 	pushl %edi
 	push %ebx
 
+	push 0x08(%ebp)
+
 	call inner_task_switch
+
+	addl $0x04, %esp
 
 	popl %ebx
 	popl %edi
 	popl %esi
-	
-	addl $0x04, %ebp
- 
+
 	leave
 	ret
 
@@ -41,12 +41,12 @@ ENTRY(switch_context)
 	movl 0x04(%esp), %eax
 	movl %ebp, (%eax)
 	movl 0x08(%esp), %esp
-	
+
 	popl %ebp
 	ret
 
 
 
 
-	
+
 

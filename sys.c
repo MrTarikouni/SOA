@@ -53,7 +53,7 @@ void copy_pag_data(page_table_entry *TP_padre, page_table_entry *TP_hijo) {
         /* mapeamos la página física del hijo en la página lógica del padre de la región vacía de la TP */
         set_ss_pag(TP_padre, i+PAG_LOG_INIT_CODE+NUM_PAG_CODE, get_frame(TP_hijo, i+PAG_LOG_INIT_DATA));
         /* copiamos los datos con los mapeos que tenemos en la TP del padre */
-        copy_data((i+PAG_LOG_INIT_DATA << 12), (i+PAG_LOG_INIT_CODE+NUM_PAG_CODE << 12), PAGE_SIZE);
+        copy_data((void *)(i+PAG_LOG_INIT_DATA << 12), (void *)(i+PAG_LOG_INIT_CODE+NUM_PAG_CODE << 12), PAGE_SIZE);
         /* liberamos la página lógica de la TP del padre que mapeaba la página física del hijo */
         del_ss_pag(TP_padre, i+PAG_LOG_INIT_CODE+NUM_PAG_CODE);
     }
