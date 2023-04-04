@@ -100,7 +100,7 @@ ENTRY(fork)
         pushl %edx
         pushl %ecx
 
-        pushl $return_fork
+            pushl $return_fork
 
         pushl %ebp
         movl %esp, %ebp
@@ -125,6 +125,43 @@ return_fork:
 fork_end:
         popl %ebp
         ret
+
+ENTRY(getpid)
+        pushl %ebp
+        movl %esp, %ebp
+
+        movl $0x14, %eax
+
+        pushl %edx
+        pushl %ecx
+
+        pushl $return_getpid
+
+        pushl %ebp
+        movl %esp, %ebp
+
+        sysenter
+
+return_getpid:
+
+        leave
+
+        add $0x04, %esp
+
+        popl %ecx
+        popl %edx
+
+        cmpl $0, %eax
+        jge getpid_end
+
+        negl %eax
+        movl %eax, errno
+        movl $-1, %eax
+getpid_end:
+        popl %ebp
+        ret
+
+
 
 
 

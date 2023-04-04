@@ -120,6 +120,10 @@ void inner_task_switch(union task_union*t){
 	switch_context(&current()->kernel_esp, t->task.kernel_esp);
 }
 
+void update_sched_data_rr() {
+
+}
+
 struct task_struct* current()
 {
   int ret_value;

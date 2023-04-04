@@ -80,8 +80,6 @@ void setTrapHandler(int vector, void (*handler)(), int maxAccessibleFromPL)
 unsigned int zeos_ticks=0;
 
 void clock_routine(){
-   /* if (zeos_ticks % 500 == 0) task_switch((union task_union *)idle_task);
-    else if (zeos_ticks % 700 == 0) task_switch((union task_union*)init_task); */
 	++zeos_ticks;
 	zeos_show_clock();
 }
