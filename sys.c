@@ -30,6 +30,12 @@ int sys_getpid()
 	return current()->PID;
 }
 
+int ret_from_fork(){
+  return 0;
+}
+
+unsigned int pid_count = 1;
+
 int sys_fork()
 {
   int PID=-1;
@@ -43,19 +49,43 @@ int sys_fork()
   union task_union *union_hijo= (union task_union*) ts_hijo;
   copy_data(current(), union_hijo,sizeof(union task_union));
 
-  dir_pages_baseAddr = 
 
-  if (allocate_DIR(ts_hijo) != 1){
-    list_add(ts_hijo.list,&freequeue);
-    return -ENOMEM
+  allocate_DIR(ts_hijo);
+  int frames[NUM_PAG_DATA];
+
+  for (int i = 0; i < NUM_PAG_DATA; i++){
+    if (alloc_frame == -1){
+      for (int j = 0; j < i; ++j) free_frame(frame[j]);
+      list_add(&ts_hijo->list, &freequeue);
+      return -ENOMEM;
+    }
   }
 
-  
+  page_table_entry *TP_padre = get_PT(current());
+  page_table_entry *TP_hijo = getPT(ts_hijo);
+
+  for (int i; i< NUM_PAG_KERNEL; ++i){
+    set_ss_pag(TP_hijo,i,getframe(TP_padre,i));
+  }
+
+  for (int i = PAG_LOG_INIT_CODE; i <PAG_LOG_INIT_CODE + NUM_PAG_CODE; ++i){
+    set_ss_pag(TP_hijo,i,getframe(TP_padre,i));
+  }
+
+  for (int i = 0; i < NUM_PAG_DATA; ++i){
+    set_ss_pag(TP_hijo, PAG_LOG_INIT_DATA+i,frames[i])
+  }
+
+  for (int i = 0; i < NUM_PAG_DATA; ++i){
+    set_ss_pag(TP_padre,i+PAG_LOG_INIT_CODE+NUM_PAG_CODE,getframe(TP_hijo,PAG_LOG_INIT_DATA+i));
+    copy_data((PAG_LOG_INIT_DATA+i) << 12,(i+PAG_LOG_INIT_CODE+NUM_PAG_CODE) << 12, PAGESIZE);
+    del_ss_pag(TP_padre, i +PAG_LOG_INIT_CODE+NUM_PAG_CODE);
+  }
+  set_cr3(get_DIR(current()));
+  ts_hijo->PID=++pid_count;
 
 
- 
-  
-  return PID;
+  return ts_hijo->PID;
 }
 
 void sys_exit()

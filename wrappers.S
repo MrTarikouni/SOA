@@ -120,7 +120,7 @@ fk_return_usr:
 		movl $-1, %eax
 fk_end:
 		
-		leave
+		popl %ebp
 		ret
 
 
