@@ -20,6 +20,8 @@ extern struct list_head blocked;
 struct list_head freequeue;      /* Freequeue */
 struct list_head readyqueue;     /* Readyqueue */
 
+int current_quantum = 0;
+
 /* get_DIR - Returns the Page Directory address for task 't' */
 page_table_entry * get_DIR (struct task_struct *t)
 {
@@ -120,8 +122,54 @@ void inner_task_switch(union task_union*t){
 	switch_context(&current()->kernel_esp, t->task.kernel_esp);
 }
 
-void update_sched_data_rr() {
+int get_quantum (struct task_struct *t) {
+    return t->quantum;
+}
 
+void set_quantum (struct task_struct *t, int new_quantum) {
+    t->quantum = new_quantum;
+}
+
+void update_sched_data_rr() {
+    --current_quantum;
+}
+
+
+int needs_sched_rr () {
+    return current_quantum <= 0;
+}
+
+void update_process_state_rr (struct task_struct *t, struct list_head *dst_queue) {
+    if (t->st!=ST_RUN) list_del(&t->list); // El estado es ready o blocked
+    if (dst_queue != NULL) { // La cola de destino es ready o block
+        list_add_tail(&t->list, dst_queue);
+        if (dst_queue == &readyqueue) t->st=ST_READY;
+        else t->st=ST_BLOCKED;
+    }
+    else t->st=ST_RUN;
+}
+
+void sched_next_rr () {
+    struct task_struct *next;
+    if (!list_empty(&readyqueue)) {
+        next=list_head_to_task_struct(list_first(&readyqueue));
+        update_process_state_rr(next, NULL);
+    }
+    else next=idle_task;
+
+    // update_process_state_rr(current(),?);
+
+    current_quantum=get_quantum(next);
+    task_switch((union task_union *)next);
+
+}
+
+void schedule () {
+    update_sched_data_rr();
+    if (needs_sched_rr()) {
+        update_process_state_rr(current(),&readyqueue);
+        sched_next_rr();
+    }
 }
 
 struct task_struct* current()

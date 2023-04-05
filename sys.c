@@ -66,14 +66,14 @@ int sys_fork()
 {
   struct task_struct* pcb_hijo;
   // Retornamos error si la freequeue está vacía
-  if (list_empty(&freequeue)) return -EFAULT;
+  if (list_empty(&freequeue)) return -ENOMEM;
   pcb_hijo = list_head_to_task_struct(list_first(&freequeue));
   list_del(&pcb_hijo->list);
 
   // Asignamos TP al hijo
   if (allocate_DIR(pcb_hijo) == -1) {
       list_add(&pcb_hijo->list, &freequeue);
-      return -EFAULT;
+      return -ENOMEM;
   }
   // Copiamos el PCB del padre al hijo
   copy_data(current(),pcb_hijo,sizeof(union task_union));
@@ -103,6 +103,7 @@ int sys_fork()
   set_cr3(get_DIR(current()));
   // Asignamos un PID=PID del anterior proceso creado +1
   pcb_hijo->PID=++pid_count;
+  pcb_hijo->st=ST_READY;
 
 /*
 
