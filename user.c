@@ -17,7 +17,16 @@ int __attribute__ ((__section__(".text.main")))
   itoa(gettime(), buffer);
   write(1, buffer, 10);
 
-  //task_switch((union task_union*)idle_task);
+  write(1, "\nPID FORK: ", 11);
+  int pid = fork();
+  itoa(pid, buffer);
+  write(1,buffer,strlen(buffer));
+
+  write(1, "\nPID GETPID: ", 13);
+  pid = getpid();
+  itoa(pid, buffer);
+  write(1,buffer,strlen(buffer));
+
 
   /* char *p=0;
   *p = 'x'; */	

@@ -95,22 +95,22 @@ ENTRY(fork)
 
 	movl $0x02, %eax
 
-	pushl %ecx
 	pushl %edx
+	pushl %ecx
 
-	pushl fk_return_usr
+	pushl $fk_return_usr
 
-	push %ebp
+	pushl %ebp
 	movl %esp, %ebp
 
-	systenter
+	sysenter
 
 fk_return_usr:
 		
 		leave
-		addl $0x04, %esp
-		popl %edx
+		add $0x04, %esp
 		popl %ecx
+		popl %edx
 
 		cmpl $0, %eax
 		jge fk_end
@@ -122,5 +122,38 @@ fk_end:
 		
 		popl %ebp
 		ret
+
+ENTRY(getpid)
+	pushl %ebp
+	movl %esp, %ebp
+
+	movl $0x14, %eax
+
+	pushl %edx
+	pushl %ecx
+
+	pushl $gp_return_usr
+
+	pushl %ebp
+	movl %esp, %ebp
+
+	sysenter
+
+gp_return_usr:
+	leave
+	add $0x04, %esp
+	popl %ecx
+	popl %edx
+	cmpl $0, %eax
+
+	jge gp_end
+
+	negl %eax
+	movl %eax, errno
+	movl $-1, %eax
+gp_end:
+	popl %ebp
+	ret
+
 
 
