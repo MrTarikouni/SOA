@@ -99,7 +99,18 @@ int sys_fork()
 
 void sys_exit()
 {  
-  
+  struct task_struct *actual = current(); 
+  page_table_entry *TP_actual = get_PT(actual);
+
+  /*for (int i = 0; i < NUM_PAG_DATA; ++i){
+    unsigned int frame = get_frame(TP_actual,PAG_LOG_INIT_DATA+i);
+    free_frame(frame);
+  }*/
+  free_user_pages(actual);
+  //list_add(&actual->list,&freequeue);
+  actual->PID = NULL;
+  actual->dir_pages_baseAddr = NULL;
+  actual->kernel_esp = NULL;
 }
 
 char buff[256];

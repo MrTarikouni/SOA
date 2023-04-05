@@ -155,5 +155,28 @@ gp_end:
 	popl %ebp
 	ret
 
+ENTRY(exit) 
+	pushl %ebp
+	movl %esp, %ebp
 
+	movl $0x1, %eax
+
+	pushl %edx
+	pushl %ecx
+
+	pushl $exit_return_usr
+
+	pushl %ebp
+	movl %esp, %ebp
+
+	sysenter
+
+exit_return_usr:
+
+	popl %ebp
+	addl $4, %esp
+	popl %edx
+	popl %ecx
+	popl %ebp    
+	ret
 

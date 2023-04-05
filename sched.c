@@ -20,6 +20,8 @@ extern struct list_head blocked;
 struct list_head freequeue;      /* Freequeue */
 struct list_head readyqueue;     /* Readyqueue */
 
+int ticks;
+
 /* get_DIR - Returns the Page Directory address for task 't' */
 page_table_entry * get_DIR (struct task_struct *t) 
 {
@@ -133,3 +135,35 @@ struct task_struct* current()
   );
   return (struct task_struct*)(ret_value&0xfffff000);
 }
+
+
+void update_sched_data_rr(){
+  --ticks;
+}
+
+int needs_sched_rr(){
+  if ((ticks < 0) && (!list_empty(&readyqueue))) return 1;
+  if (ticks < 0) ticks = current()->quantum;
+  return 0;
+}
+
+void update_process_state_rr(struct task_struct *t, struct list_head *dest){
+  if (t != current()){
+    list_del(&t->list);
+    if (dest != NULL) list_add_tail(&t->list,dest);
+  } 
+}
+
+void sched_next_rr(){
+  if (!list_empty(&readyqueue)){
+    struct task_struct *t = list_head_to_task_struct(&readyqueue);
+    task_switch((union task_union*)t );
+  }
+  else {
+    task_switch((union task_union*)idle_task);
+  }
+  list_del(&readyqueue);
+}
+
+
+
