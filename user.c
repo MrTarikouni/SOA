@@ -22,11 +22,12 @@ int __attribute__ ((__section__(".text.main")))
   int pid = fork();
   itoa(pid, buffer);
   write(1,buffer,strlen(buffer));
-
+/*
   write(1,"\nPID GETPID: ", 13);
   pid = getpid();
   itoa(pid,buffer);
   write(1,buffer,strlen(buffer));
+*/
   /* char *p=0;
   *p = 'x'; */
   while(1) {}

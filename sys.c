@@ -35,17 +35,6 @@ int ret_from_fork() {
 }
 
 
-/* Buscamos las páginas en las que mapear las páginas lógicas del hijo */
-int allocate_frames(int *frames[], struct task_struct *ts_hijo) {
-    for (int i = 0; i < NUM_PAG_DATA; ++i) {
-        if (frames[i]=alloc_frame() < 0) {
-            for (int j = 0; j < i; ++j) free_frame(frames[j]);
-            list_add(&ts_hijo->list, &freequeue);
-            return -ENOMEM;
-        }//
-    }
-    return 1;
-}
 
 /* Copia la user data+stak del padre al hijo */
 void copy_pag_data(page_table_entry *TP_padre, page_table_entry *TP_hijo) {
@@ -64,38 +53,48 @@ unsigned int pid_count = 1;
 
 int sys_fork()
 {
-  struct task_struct* pcb_hijo;
   // Retornamos error si la freequeue está vacía
   if (list_empty(&freequeue)) return -ENOMEM;
-  pcb_hijo = list_head_to_task_struct(list_first(&freequeue));
-  list_del(&pcb_hijo->list);
+  struct task_struct* pcb_hijo = list_head_to_task_struct(list_first(&freequeue));
+  list_del(pcb_hijo->list);
+
+ // Copiamos el PCB del padre al hijo
+  copy_data(current(),(union task_union *)pcb_hijo,sizeof(union task_union));
 
   // Asignamos TP al hijo
   if (allocate_DIR(pcb_hijo) == -1) {
-      list_add(&pcb_hijo->list, &freequeue);
+      list_add(pcb_hijo->list, &freequeue);
       return -ENOMEM;
   }
-  // Copiamos el PCB del padre al hijo
-  copy_data(current(),pcb_hijo,sizeof(union task_union));
 
   union task_union *tu_hijo = (union task_union*) pcb_hijo;
 
-  // Páginas físicas  padre de user data+stack
-  int frames[NUM_PAG_DATA], res;
-  if (res = allocate_frames(&frames, tu_hijo) < 0) return res;
-
   page_table_entry *TP_padre = get_PT(current()), *TP_hijo = get_PT(pcb_hijo);
+
+  // Páginas físicas  padre de user data+stack
+  int frames[NUM_PAG_DATA];
+  /* Buscamos las páginas en las que mapear las páginas lógicas del hijo */
+  for (int i = 0; i < NUM_PAG_DATA; ++i) {
+      frames[i]=alloc_frame();
+      if (frames[i]< 0) {
+          for (int j = 0; j < i; ++j) free_frame(frames[j]);
+          list_add_tail(pcb_hijo->list, &freequeue);
+          return -ENOMEM;
+        }//
+    }
+
+
   // Mismas direcciones del KERNEL de la TP del hijo y del padre
   for (int i = 0; i < NUM_PAG_KERNEL; ++i)
       set_ss_pag(TP_hijo, i, get_frame(TP_padre,i));
   // Las direcciones del código de usuario también se comparten
-  for (int i = PAG_LOG_INIT_CODE; i < NUM_PAG_CODE; ++i)
+  for (int i = PAG_LOG_INIT_CODE; i < PAG_LOG_INIT_CODE+NUM_PAG_CODE; ++i)
       set_ss_pag(TP_hijo, i, get_frame(TP_padre,i));
 
 
   // Entradas de la user data+stack que apuntan a las NUM_PAG_DATA
-  for (int i = PAG_LOG_INIT_DATA; i < NUM_PAG_DATA; ++i)
-      set_ss_pag(TP_hijo, i, frames[i]);
+  for (int i = 0; i < NUM_PAG_DATA; ++i)
+      set_ss_pag(TP_hijo, PAG_LOG_INIT_DATA+i, frames[i]);
 
   copy_pag_data(TP_padre, TP_hijo);
 
@@ -137,9 +136,9 @@ int sys_fork()
            -------------/
 */
 
-  tu_hijo->stack[1005]=0;
-  tu_hijo->stack[1006]=&ret_from_fork;
-  pcb_hijo->kernel_esp=tu_hijo->stack[1005];
+  tu_hijo->stack[1005]=(unsigned long) 0;
+  tu_hijo->stack[1006]=(unsigned long) ret_from_fork;
+  pcb_hijo->kernel_esp=(unsigned long) &tu_hijo->stack[1005];
 
   // añadimos al hijo en la readyqueue
   list_add_tail(&pcb_hijo->list, &readyqueue);

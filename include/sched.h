@@ -11,6 +11,7 @@
 
 #define NR_TASKS      10
 #define KERNEL_STACK_SIZE	1024
+#define DEFAULT_QUANTUM 10
 
 enum state_t { ST_RUN, ST_READY, ST_BLOCKED };
 
@@ -51,7 +52,7 @@ void init_sched(void);
 
 struct task_struct * current();
 
-void switch_context(unsigned long* current_kernel_esp, unsigned long* new_kernel_esp);
+void switch_context(unsigned long* current_kernel_esp, unsigned long new_kernel_esp);
 
 void task_switch(union task_union*t);
 

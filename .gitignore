@@ -6,4 +6,4 @@
 system
 bootsect
 *~ build
-
+*.json
