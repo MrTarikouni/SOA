@@ -81,7 +81,7 @@ void init_idle (void)
    * */
   tu_idle->stack[1023]= (unsigned long)&cpu_idle;
   tu_idle->stack[1022]= 0;
-  idle_task->kernel_esp= (unsigned long)&tu_idle->stack[1022];
+  idle_task->kernel_esp= (unsigned long)&(tu_idle->stack[1022]);
 }
 
 struct task_struct *init_task;

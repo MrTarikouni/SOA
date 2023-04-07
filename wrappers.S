@@ -100,7 +100,7 @@ ENTRY(fork)
         pushl %edx
         pushl %ecx
 
-            pushl $return_fork
+        pushl $return_fork
 
         pushl %ebp
         movl %esp, %ebp
@@ -162,6 +162,29 @@ getpid_end:
         ret
 
 
+    ENTRY(exit)
+    	pushl %ebp
+	    mov %esp,%ebp
 
+    	movl $1, %eax
+
+    	pushl %edx
+    	pushl %ecx
+
+	    push $exit_ret
+
+	    pushl %ebp
+	    movl %esp,%ebp
+
+	    # Entramos
+	    sysenter
+
+exit_ret:
+	    popl %ebp
+	    addl $4, %esp
+	    popl %edx
+	    popl %ecx
+	    popl %ebp
+	    ret
 
 

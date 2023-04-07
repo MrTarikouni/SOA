@@ -38,13 +38,13 @@ int ret_from_fork() {
 
 /* Copia la user data+stak del padre al hijo */
 void copy_pag_data(page_table_entry *TP_padre, page_table_entry *TP_hijo) {
-    for (int i = 0; i < NUM_PAG_DATA; ++i) {
+    for (int i = NUM_PAG_KERNEL+NUM_PAG_CODE; i < NUM_PAG_KERNEL+NUM_PAG_CODE+NUM_PAG_DATA; ++i) {
         /* mapeamos la página física del hijo en la página lógica del padre de la región vacía de la TP */
-        set_ss_pag(TP_padre, i+PAG_LOG_INIT_CODE+NUM_PAG_CODE, get_frame(TP_hijo, i+PAG_LOG_INIT_DATA));
+        set_ss_pag(TP_padre, i+NUM_PAG_DATA, get_frame(TP_hijo, i));
         /* copiamos los datos con los mapeos que tenemos en la TP del padre */
-        copy_data((void *)(i+PAG_LOG_INIT_DATA << 12), (void *)(i+PAG_LOG_INIT_CODE+NUM_PAG_CODE << 12), PAGE_SIZE);
+        copy_data((void *)((i) << 12), (void *)((i+NUM_PAG_DATA) << 12), PAGE_SIZE);
         /* liberamos la página lógica de la TP del padre que mapeaba la página física del hijo */
-        del_ss_pag(TP_padre, i+PAG_LOG_INIT_CODE+NUM_PAG_CODE);
+        del_ss_pag(TP_padre, i+NUM_PAG_DATA);
     }
 
 }
@@ -133,12 +133,12 @@ int sys_fork()
    1022 -> |    ESP    |   /
            -------------  /
    1023 -> |    SS     | /
-           -------------/
+           -------------/
 */
 
   tu_hijo->stack[1005]=(unsigned long) 0;
-  tu_hijo->stack[1006]=(unsigned long) ret_from_fork;
-  pcb_hijo->kernel_esp=(unsigned long) &tu_hijo->stack[1005];
+  tu_hijo->stack[1006]=(unsigned long) &ret_from_fork;
+  pcb_hijo->kernel_esp=(unsigned long)&tu_hijo->stack[1005];
 
   // añadimos al hijo en la readyqueue
   list_add_tail(&pcb_hijo->list, &readyqueue);
@@ -148,6 +148,22 @@ int sys_fork()
 
 void sys_exit()
 {
+    struct task_struct *actual = current();
+    page_table_entry *TP_actual = get_PT(actual);
+
+    for (int i = 0; i < NUM_PAG_DATA; ++i){
+      unsigned int frame = get_frame(TP_actual,PAG_LOG_INIT_DATA+i);
+      free_frame(frame);
+      del_ss_pag(TP_actual,PAG_LOG_INIT_DATA+i);
+    }
+    //free_user_pages(actual);
+    list_add_tail(&actual->list,&freequeue);
+    actual->PID = -1;
+    actual->dir_pages_baseAddr = NULL;
+    actual->kernel_esp = NULL;
+    actual->quantum = NULL;
+    //update_process_state_rr(actual, &freequeue);
+    sched_next_rr();
 }
 
 char buff[256];

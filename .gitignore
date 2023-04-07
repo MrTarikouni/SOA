@@ -7,3 +7,4 @@ system
 bootsect
 *~ build
 *.json
+.cache/+
