@@ -20,7 +20,7 @@ extern struct list_head blocked;
 struct list_head freequeue;      /* Freequeue */
 struct list_head readyqueue;     /* Readyqueue */
 
-int ticks;
+int current_quantum = 0;
 
 /* get_DIR - Returns the Page Directory address for task 't' */
 page_table_entry * get_DIR (struct task_struct *t) 
@@ -57,6 +57,14 @@ void cpu_idle(void)
 	}
 }
 
+int get_quantum (struct task_struct *t){
+  return t->quantum;
+}
+
+void set_quantum (struct task_struct *t, int new_quantum){
+  t->quantum = new_quantum;
+}
+
 struct task_struct *idle_task;
 
 void init_idle (void)
@@ -65,7 +73,7 @@ void init_idle (void)
   union task_union *tu = &pcb; 
  
   list_del(&pcb->list);						// Borramos el task union de la freequeue
-
+  pcb->quantum = QUANTUM;
   pcb->PID = 0;
   allocate_DIR(pcb);				// Alocatamos el directorion de la tabla de páginas
   
@@ -94,11 +102,14 @@ void init_task1(void)
   union task_union *tu = (union task_union*)init_task;
 
   list_del(&init_task->list);                                                 // Borramos el task union de la freequeue
-
+  init_task->quantum = QUANTUM;
+  current_quantum = init_task->quantum;   
   init_task->PID=1;
   allocate_DIR(init_task);
 
-  set_user_pages(init_task);							
+  set_user_pages(init_task);		
+
+
 
   tss.esp0=&tu->stack[1024];
   writeMSR(0x175,0x0, (unsigned long)&tu->stack[1024]);
@@ -111,18 +122,61 @@ void init_sched()
 	INIT_LIST_HEAD(&freequeue);			//Inicializar la freequeue vacia
 	INIT_LIST_HEAD(&readyqueue); 			//Inicializar la readyqueue vacía
 	for (int i = 0; i < NR_TASKS; ++i) 		//Inicializar la freequeue con todos los task_structs.
-		list_add(&task[i].task.list,&freequeue);
+		list_add_tail(&task[i].task.list,&freequeue);
 }
 
 
-void inner_task_switch(union task_union*t){
-
+void inner_task_switch(union task_union *t){
+  printk("Estoy cambiando de proceso");
 	page_table_entry *dir = get_DIR(&t->task);
+  tss.esp0 = (int)&t->stack[KERNEL_STACK_SIZE];
+  writeMSR( 0x175, 0x0, (unsigned long)&(t->stack[KERNEL_STACK_SIZE]));
 	set_cr3(dir);
-	tss.esp0 = t->stack[1024];
-	writeMSR( 0x175, 0x0, t->stack[1024]);
-	switch_context(current()->kernel_esp, t->task.kernel_esp);
+	switch_context(&current()->kernel_esp, t->task.kernel_esp);
 
+}
+
+void update_sched_data_rr(){
+  --current_quantum;
+}
+
+int needs_sched_rr(){
+ if ((current_quantum==0)&&(!list_empty(&readyqueue))) return 1;
+  if (current_quantum==0) current_quantum=get_quantum(current());
+  return 0;
+}
+
+void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue){
+  if (t->st!=ST_RUN) list_del(&t->list); // El estado es ready o blocked
+    if (dst_queue != NULL) { // La cola de destino es ready o block
+        list_add_tail(&t->list, dst_queue);
+        if (dst_queue == &readyqueue) t->st=ST_READY;
+        else t->st=ST_BLOCKED;
+    }
+    else t->st=ST_RUN;
+}
+
+void sched_next_rr(){
+  struct task_struct *next;
+    if (!list_empty(&readyqueue)) {
+        next=list_head_to_task_struct(list_first(&readyqueue));
+        update_process_state_rr(next, NULL);
+        list_del(list_first(&readyqueue));
+    }
+    else next=idle_task;
+
+    // update_process_state_rr(current(),?);
+
+    current_quantum=get_quantum(next);
+    task_switch((union task_union *)next);
+}
+
+void schedule(){
+  update_sched_data_rr();
+  if (needs_sched_rr()){
+    update_process_state_rr(current(), &readyqueue);
+    sched_next_rr();
+  }
 }
 
 struct task_struct* current()
@@ -137,33 +191,6 @@ struct task_struct* current()
 }
 
 
-void update_sched_data_rr(){
-  --ticks;
-}
-
-int needs_sched_rr(){
-  if ((ticks < 0) && (!list_empty(&readyqueue))) return 1;
-  if (ticks < 0) ticks = current()->quantum;
-  return 0;
-}
-
-void update_process_state_rr(struct task_struct *t, struct list_head *dest){
-  if (t != current()){
-    list_del(&t->list);
-    if (dest != NULL) list_add_tail(&t->list,dest);
-  } 
-}
-
-void sched_next_rr(){
-  if (!list_empty(&readyqueue)){
-    struct task_struct *t = list_head_to_task_struct(&readyqueue);
-    task_switch((union task_union*)t );
-  }
-  else {
-    task_switch((union task_union*)idle_task);
-  }
-  list_del(&readyqueue);
-}
 
 
 

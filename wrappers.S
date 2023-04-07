@@ -155,28 +155,27 @@ gp_end:
 	popl %ebp
 	ret
 
-ENTRY(exit) 
+ENTRY(exit)
 	pushl %ebp
-	movl %esp, %ebp
-
-	movl $0x1, %eax
-
+	mov %esp,%ebp
+	
+	movl $1, %eax
+	
 	pushl %edx
 	pushl %ecx
 
-	pushl $exit_return_usr
+	push $exit_ret
 
 	pushl %ebp
-	movl %esp, %ebp
+	movl %esp,%ebp
 
+	# Entramos
 	sysenter
 
-exit_return_usr:
-
+exit_ret:
 	popl %ebp
 	addl $4, %esp
 	popl %edx
 	popl %ecx
-	popl %ebp    
+	popl %ebp
 	ret
-

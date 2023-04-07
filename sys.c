@@ -56,7 +56,7 @@ int sys_fork()
   for (int i = 0; i < NUM_PAG_DATA; i++){
     if (alloc_frame < 0){
       for (int j = 0; j < i; ++j) free_frame(frames[j]);
-      list_add(&ts_hijo->list, &freequeue);
+      list_add_tail(ts_hijo, &freequeue);
       return -ENOMEM;
     }
   }
@@ -76,19 +76,25 @@ int sys_fork()
     set_ss_pag(TP_hijo, PAG_LOG_INIT_DATA+i,frames[i]);
   }
 
-  for (int i = 0; i < NUM_PAG_DATA; ++i){
-    set_ss_pag(TP_padre,i+PAG_LOG_INIT_CODE+NUM_PAG_CODE,get_frame(TP_hijo,PAG_LOG_INIT_DATA+i));
-    copy_data((void *)(PAG_LOG_INIT_DATA+i << 12) ,(void *)(i+PAG_LOG_INIT_CODE+NUM_PAG_CODE << 12) , PAGE_SIZE);
-    del_ss_pag(TP_padre, i +PAG_LOG_INIT_CODE+NUM_PAG_CODE);
+  /*for (int i = 0; i < NUM_PAG_DATA; ++i){
+    set_ss_pag(TP_padre,i+PAG_LOG_INIT_DATA+NUM_PAG_DATA,get_frame(TP_hijo,PAG_LOG_INIT_DATA+i));
+    copy_data((void *)(PAG_LOG_INIT_DATA+i << 12) ,(void *)(i+PAG_LOG_INIT_DATA+NUM_PAG_DATA << 12) , PAGE_SIZE);
+    del_ss_pag(TP_padre, i +PAG_LOG_INIT_DATA+NUM_PAG_DATA);
+  }*/
+  int pag = 0;
+  for (pag=NUM_PAG_KERNEL+NUM_PAG_CODE; pag < NUM_PAG_KERNEL+NUM_PAG_CODE+NUM_PAG_DATA;pag++){
+    set_ss_pag(TP_padre,pag + NUM_PAG_DATA, get_frame(TP_hijo,pag));
+    copy_data((void*)(pag << 12), (void*)((pag + NUM_PAG_DATA) << 12),PAGE_SIZE);
+    del_ss_pag(TP_padre, pag + NUM_PAG_DATA);
   }
   set_cr3(get_DIR(current()));
   ts_hijo->PID=++pid_count;
 
   union_hijo->stack[1005] = 0;
   union_hijo->stack[1006] = &ret_from_fork;
-  ts_hijo->kernel_esp= union_hijo->stack[1005];
+  ts_hijo->kernel_esp= &(union_hijo->stack[1005]);
 
-  list_add_tail(&ts_hijo->list,&readyqueue);
+  list_add_tail(&(ts_hijo->list),&readyqueue);
 
   return ts_hijo->PID;
 }
@@ -102,15 +108,19 @@ void sys_exit()
   struct task_struct *actual = current(); 
   page_table_entry *TP_actual = get_PT(actual);
 
-  /*for (int i = 0; i < NUM_PAG_DATA; ++i){
+  for (int i = 0; i < NUM_PAG_DATA; ++i){
     unsigned int frame = get_frame(TP_actual,PAG_LOG_INIT_DATA+i);
     free_frame(frame);
-  }*/
-  free_user_pages(actual);
-  //list_add(&actual->list,&freequeue);
-  actual->PID = NULL;
+    del_ss_pag(TP_actual,PAG_LOG_INIT_DATA+i);
+  }
+  //free_user_pages(actual);
+  list_add_tail(&actual->list,&freequeue);
+  actual->PID = -1;
   actual->dir_pages_baseAddr = NULL;
   actual->kernel_esp = NULL;
+  actual->quantum = NULL;
+  //update_process_state_rr(actual, &freequeue);
+  sched_next_rr();
 }
 
 char buff[256];

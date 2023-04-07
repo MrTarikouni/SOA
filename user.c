@@ -16,7 +16,7 @@ int __attribute__ ((__section__(".text.main")))
   char *buffer = "\0\0\0\0\0\0\0\0\0\n";
   itoa(gettime(), buffer);
   write(1, buffer, 10);
-
+  
   write(1, "\nPID FORK: ", 11);
   int pid = fork();
   itoa(pid, buffer);
@@ -26,6 +26,8 @@ int __attribute__ ((__section__(".text.main")))
   pid = getpid();
   itoa(pid, buffer);
   write(1,buffer,strlen(buffer));
+
+  //exit();
 
 
   /* char *p=0;
