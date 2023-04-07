@@ -79,7 +79,7 @@ int sys_fork()
       if (frames[i]< 0) {
           for (int j = 0; j < i; ++j) free_frame(frames[j]);
           list_add_tail(pcb_hijo->list, &freequeue);
-          return -ENOMEM;
+          return -EAGAIN;
         }//
     }
 
