@@ -8,13 +8,6 @@
 
 int errno;
 
-void perror() {
-	if (errno == 14) write(1, "Bad address\n", 12);
-	else if (errno == 13) write(1,"Permission denied\n", 18);
-	else if (errno == 9) write(1, "Bad file number\n", 16);
-}
-
-
 void itoa(int a, char *b)
 {
   int i, i1;
@@ -50,3 +43,11 @@ int strlen(char *a)
   return i;
 }
 
+void perror()
+{
+  char buffer[256];
+
+  itoa(errno, buffer);
+
+  write(1, buffer, strlen(buffer));
+}

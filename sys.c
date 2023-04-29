@@ -2,27 +2,46 @@
  * sys.c - Syscalls implementation
  */
 #include <devices.h>
+
 #include <utils.h>
+
 #include <io.h>
+
 #include <mm.h>
+
 #include <mm_address.h>
+
 #include <sched.h>
+
+#include <p_stats.h>
+
 #include <errno.h>
-#include <interrupt.h>
 
 #define LECTURA 0
 #define ESCRIPTURA 1
 
+void * get_ebp();
+
 int check_fd(int fd, int permissions)
 {
-  if (fd!=1) return -9; /*EBADF*/
-  if (permissions!=ESCRIPTURA) return -13; /*EACCES*/
+  if (fd!=1) return -EBADF; 
+  if (permissions!=ESCRIPTURA) return -EACCES; 
   return 0;
+}
+
+void user_to_system(void)
+{
+  update_stats(&(current()->p_stats.user_ticks), &(current()->p_stats.elapsed_total_ticks));
+}
+
+void system_to_user(void)
+{
+  update_stats(&(current()->p_stats.system_ticks), &(current()->p_stats.elapsed_total_ticks));
 }
 
 int sys_ni_syscall()
 {
-	return -38; /*ENOSYS*/
+	return -ENOSYS; 
 }
 
 int sys_getpid()
@@ -30,165 +49,190 @@ int sys_getpid()
 	return current()->PID;
 }
 
-int ret_from_fork() {
-    return 0;
-}
+int global_PID=1000;
 
-
-
-/* Copia la user data+stak del padre al hijo */
-void copy_pag_data(page_table_entry *TP_padre, page_table_entry *TP_hijo) {
-    for (int i = NUM_PAG_KERNEL+NUM_PAG_CODE; i < NUM_PAG_KERNEL+NUM_PAG_CODE+NUM_PAG_DATA; ++i) {
-        /* mapeamos la página física del hijo en la página lógica del padre de la región vacía de la TP */
-        set_ss_pag(TP_padre, i+NUM_PAG_DATA, get_frame(TP_hijo, i));
-        /* copiamos los datos con los mapeos que tenemos en la TP del padre */
-        copy_data((void *)((i) << 12), (void *)((i+NUM_PAG_DATA) << 12), PAGE_SIZE);
-        /* liberamos la página lógica de la TP del padre que mapeaba la página física del hijo */
-        del_ss_pag(TP_padre, i+NUM_PAG_DATA);
-    }
-
-}
-
-unsigned int pid_count = 1;
-
-int sys_fork()
+int ret_from_fork()
 {
-  // Retornamos error si la freequeue está vacía
+  return 0;
+}
+
+int sys_fork(void)
+{
+  struct list_head *lhcurrent = NULL;
+  union task_union *uchild;
+  
+  /* Any free task_struct? */
   if (list_empty(&freequeue)) return -ENOMEM;
-  struct task_struct* pcb_hijo = list_head_to_task_struct(list_first(&freequeue));
-  list_del(pcb_hijo->list);
 
- // Copiamos el PCB del padre al hijo
-  copy_data(current(),(union task_union *)pcb_hijo,sizeof(union task_union));
-
-  // Asignamos TP al hijo
-  if (allocate_DIR(pcb_hijo) == -1) {
-      list_add(pcb_hijo->list, &freequeue);
-      return -ENOMEM;
+  lhcurrent=list_first(&freequeue);
+  
+  list_del(lhcurrent);
+  
+  uchild=(union task_union*)list_head_to_task_struct(lhcurrent);
+  
+  /* Copy the parent's task struct to child's */
+  copy_data(current(), uchild, sizeof(union task_union));
+  
+  /* new pages dir */
+  allocate_DIR((struct task_struct*)uchild);
+  
+  /* Allocate pages for DATA+STACK */
+  int new_ph_pag, pag, i;
+  page_table_entry *process_PT = get_PT(&uchild->task);
+  for (pag=0; pag<NUM_PAG_DATA; pag++)
+  {
+    new_ph_pag=alloc_frame();
+    if (new_ph_pag!=-1) /* One page allocated */
+    {
+      set_ss_pag(process_PT, PAG_LOG_INIT_DATA+pag, new_ph_pag);
+    }
+    else /* No more free pages left. Deallocate everything */
+    {
+      /* Deallocate allocated pages. Up to pag. */
+      for (i=0; i<pag; i++)
+      {
+        free_frame(get_frame(process_PT, PAG_LOG_INIT_DATA+i));
+        del_ss_pag(process_PT, PAG_LOG_INIT_DATA+i);
+      }
+      /* Deallocate task_struct */
+      list_add_tail(lhcurrent, &freequeue);
+      
+      /* Return error */
+      return -EAGAIN; 
+    }
   }
 
-  union task_union *tu_hijo = (union task_union*) pcb_hijo;
-
-  page_table_entry *TP_padre = get_PT(current()), *TP_hijo = get_PT(pcb_hijo);
-
-  // Páginas físicas  padre de user data+stack
-  int frames[NUM_PAG_DATA];
-  /* Buscamos las páginas en las que mapear las páginas lógicas del hijo */
-  for (int i = 0; i < NUM_PAG_DATA; ++i) {
-      frames[i]=alloc_frame();
-      if (frames[i]< 0) {
-          for (int j = 0; j < i; ++j) free_frame(frames[j]);
-          list_add_tail(pcb_hijo->list, &freequeue);
-          return -ENOMEM;
-        }//
-    }
-
-
-  // Mismas direcciones del KERNEL de la TP del hijo y del padre
-  for (int i = 0; i < NUM_PAG_KERNEL; ++i)
-      set_ss_pag(TP_hijo, i, get_frame(TP_padre,i));
-  // Las direcciones del código de usuario también se comparten
-  for (int i = PAG_LOG_INIT_CODE; i < PAG_LOG_INIT_CODE+NUM_PAG_CODE; ++i)
-      set_ss_pag(TP_hijo, i, get_frame(TP_padre,i));
-
-
-  // Entradas de la user data+stack que apuntan a las NUM_PAG_DATA
-  for (int i = 0; i < NUM_PAG_DATA; ++i)
-      set_ss_pag(TP_hijo, PAG_LOG_INIT_DATA+i, frames[i]);
-
-  copy_pag_data(TP_padre, TP_hijo);
-
-  // Flush TLB para que el padre no las traducciones del hijo
+  /* Copy parent's SYSTEM and CODE to child. */
+  page_table_entry *parent_PT = get_PT(current());
+  for (pag=0; pag<NUM_PAG_KERNEL; pag++)
+  {
+    set_ss_pag(process_PT, pag, get_frame(parent_PT, pag));
+  }
+  for (pag=0; pag<NUM_PAG_CODE; pag++)
+  {
+    set_ss_pag(process_PT, PAG_LOG_INIT_CODE+pag, get_frame(parent_PT, PAG_LOG_INIT_CODE+pag));
+  }
+  /* Copy parent's DATA to child. We will use TOTAL_PAGES-1 as a temp logical page to map to */
+  for (pag=NUM_PAG_KERNEL+NUM_PAG_CODE; pag<NUM_PAG_KERNEL+NUM_PAG_CODE+NUM_PAG_DATA; pag++)
+  {
+    /* Map one child page to parent's address space. */
+    set_ss_pag(parent_PT, pag+NUM_PAG_DATA, get_frame(process_PT, pag));
+    copy_data((void*)(pag<<12), (void*)((pag+NUM_PAG_DATA)<<12), PAGE_SIZE);
+    del_ss_pag(parent_PT, pag+NUM_PAG_DATA);
+  }
+  /* Deny access to the child's memory space */
   set_cr3(get_DIR(current()));
-  // Asignamos un PID=PID del anterior proceso creado +1
-  pcb_hijo->PID=++pid_count;
-  pcb_hijo->st=ST_READY;
 
-/*
+  uchild->task.PID=++global_PID;
+  uchild->task.state=ST_READY;
 
-   PILA DE SISTEMA HIJO:
+  int register_ebp;		/* frame pointer */
+  /* Map Parent's ebp to child's stack */
+  register_ebp = (int) get_ebp();
+  register_ebp=(register_ebp - (int)current()) + (int)(uchild);
 
-    POS
-           -------------
-   1005 -> |     0     | <--- "EBP"
-           -------------
-   1006 -> |@ret_f_fork|
-           -------------
-   1007    |  @handler |
-           -------------\
-   1008 -> |    EBX    | \
-           -------------  \
-           |    ....   |   \
-           -------------   /--> Ctxt sw
-           |    FS     |  /
-           ------------- /
-   1018 -> |    GS     |/
-           -------------\
-           |    EIP    | \
-           -------------  \
-           |    CS     |   \
-           -------------    \
-           |    PSW    |     \--> Ctxt hw
-           -------------    /
-   1022 -> |    ESP    |   /
-           -------------  /
-   1023 -> |    SS     | /
-           -------------/
-*/
+  uchild->task.register_esp=register_ebp + sizeof(DWord);
 
-  tu_hijo->stack[1005]=(unsigned long) 0;
-  tu_hijo->stack[1006]=(unsigned long) &ret_from_fork;
-  pcb_hijo->kernel_esp=(unsigned long)&tu_hijo->stack[1005];
+  DWord temp_ebp=*(DWord*)register_ebp;
+  /* Prepare child stack for context switch */
+  uchild->task.register_esp-=sizeof(DWord);
+  *(DWord*)(uchild->task.register_esp)=(DWord)&ret_from_fork;
+  uchild->task.register_esp-=sizeof(DWord);
+  *(DWord*)(uchild->task.register_esp)=temp_ebp;
 
-  // añadimos al hijo en la readyqueue
-  list_add_tail(&pcb_hijo->list, &readyqueue);
+  /* Set stats to 0 */
+  init_stats(&(uchild->task.p_stats));
 
-  return pcb_hijo->PID;
+  /* Queue child process into readyqueue */
+  uchild->task.state=ST_READY;
+  list_add_tail(&(uchild->task.list), &readyqueue);
+  
+  return uchild->task.PID;
+}
+
+#define TAM_BUFFER 512
+
+int sys_write(int fd, char *buffer, int nbytes) {
+char localbuffer [TAM_BUFFER];
+int bytes_left;
+int ret;
+
+	if ((ret = check_fd(fd, ESCRIPTURA)))
+		return ret;
+	if (nbytes < 0)
+		return -EINVAL;
+	if (!access_ok(VERIFY_READ, buffer, nbytes))
+		return -EFAULT;
+	
+	bytes_left = nbytes;
+	while (bytes_left > TAM_BUFFER) {
+		copy_from_user(buffer, localbuffer, TAM_BUFFER);
+		ret = sys_write_console(localbuffer, TAM_BUFFER);
+		bytes_left-=ret;
+		buffer+=ret;
+	}
+	if (bytes_left > 0) {
+		copy_from_user(buffer, localbuffer,bytes_left);
+		ret = sys_write_console(localbuffer, bytes_left);
+		bytes_left-=ret;
+	}
+	return (nbytes-bytes_left);
+}
+
+
+extern int zeos_ticks;
+
+int sys_gettime()
+{
+  return zeos_ticks;
 }
 
 void sys_exit()
-{
-    struct task_struct *actual = current();
-    page_table_entry *TP_actual = get_PT(actual);
+{  
+  int i;
 
-    for (int i = 0; i < NUM_PAG_DATA; ++i){
-      unsigned int frame = get_frame(TP_actual,PAG_LOG_INIT_DATA+i);
-      free_frame(frame);
-      del_ss_pag(TP_actual,PAG_LOG_INIT_DATA+i);
+  page_table_entry *process_PT = get_PT(current());
+
+  // Deallocate all the propietary physical pages
+  for (i=0; i<NUM_PAG_DATA; i++)
+  {
+    free_frame(get_frame(process_PT, PAG_LOG_INIT_DATA+i));
+    del_ss_pag(process_PT, PAG_LOG_INIT_DATA+i);
+  }
+  
+  /* Free task_struct */
+  list_add_tail(&(current()->list), &freequeue);
+  
+  current()->PID=-1;
+  
+  /* Restarts execution of the next process */
+  sched_next_rr();
+}
+
+/* System call to force a task switch */
+int sys_yield()
+{
+  force_task_switch();
+  return 0;
+}
+
+extern int remaining_quantum;
+
+int sys_get_stats(int pid, struct stats *st)
+{
+  int i;
+  
+  if (!access_ok(VERIFY_WRITE, st, sizeof(struct stats))) return -EFAULT; 
+  
+  if (pid<0) return -EINVAL;
+  for (i=0; i<NR_TASKS; i++)
+  {
+    if (task[i].task.PID==pid)
+    {
+      task[i].task.p_stats.remaining_ticks=remaining_quantum;
+      copy_to_user(&(task[i].task.p_stats), st, sizeof(struct stats));
+      return 0;
     }
-    //free_user_pages(actual);
-    list_add_tail(&actual->list,&freequeue);
-    actual->PID = -1;
-    actual->dir_pages_baseAddr = NULL;
-    actual->kernel_esp = NULL;
-    actual->quantum = NULL;
-    //update_process_state_rr(actual, &freequeue);
-    sched_next_rr();
-}
-
-char buff[256];
-//#define BUFF_SIZE 256
-
-int sys_write(int fd, char *buffer, int size)
-{
-
-  int bytes_escritos = 0;
-
-  int res_fd = check_fd(fd, ESCRIPTURA);
-  if (res_fd < 0) return res_fd;	//Si fd da error, se retorna el código de error.
-  if (buffer == NULL) return -EFAULT;	//Si el pointer del buffer es NULL se retorna error.
-
-  int res_access = access_ok(VERIFY_WRITE,buffer,size);
-  if (!res_access) return -EFAULT;
-
-  if (size < 0) return -EFAULT;
-
-  if (copy_from_user(buffer, buff, size)) return -EFAULT;
-  bytes_escritos += sys_write_console(buff,size);
-
-  return bytes_escritos;
-}
-
-int sys_gettime() {
-	return zeos_ticks;
+  }
+  return -ESRCH; /*ESRCH */
 }

@@ -6,8 +6,7 @@
 #include <segment.h>
 #include <hardware.h>
 #include <io.h>
-#include <libc.h>
-#include <system.h>
+
 #include <sched.h>
 
 #include <zeos_interrupt.h>
@@ -31,6 +30,23 @@ char char_map[] =
   '\0','\0','\0','\0','\0','\0','\0','\0',
   '\0','\0'
 };
+
+int zeos_ticks = 0;
+
+void clock_routine()
+{
+  zeos_show_clock();
+  zeos_ticks ++;
+  
+  schedule();
+}
+
+void keyboard_routine()
+{
+  unsigned char c = inb(0x60);
+  
+  if (c&0x80) printc_xy(0, 0, char_map[c&0x7f]);
+}
 
 void setInterruptHandler(int vector, void (*handler)(), int maxAccessibleFromPL)
 {
@@ -76,65 +92,32 @@ void setTrapHandler(int vector, void (*handler)(), int maxAccessibleFromPL)
   idt[vector].highOffset      = highWord((DWord)handler);
 }
 
+void clock_handler();
+void keyboard_handler();
+void system_call_handler();
 
-unsigned int zeos_ticks=0;
+void setMSR(unsigned long msr_number, unsigned long high, unsigned long low);
 
-void clock_routine(){
-    schedule();
-	++zeos_ticks;
-	zeos_show_clock();
+void setSysenter()
+{
+  setMSR(0x174, 0, __KERNEL_CS);
+  setMSR(0x175, 0, INITIAL_ESP);
+  setMSR(0x176, 0, (unsigned long)system_call_handler);
 }
-
-
-void keyboard_routine(){
-	char value = inb(0x60);
-	if (!(value & 0x80)) printc(char_map[value & 0x7F]); //Si el primer bit no está activo (Make), se escribe el código ASCII de los últimos 7 								//bits
-}
-
-void pf_routine(int flags, int eip) {
-  char bff[10];
-  itoa(eip,bff);
-  printk("PAGE FAULT exception at EIP: 0x");
-  int quotient, remainder;
-  int i, j = 0;
-
-  char tmp[100];
-
-  quotient = eip;
-
-  while (quotient != 0) 	//Decimal a hexadecimal
-  {
-      remainder = quotient % 16;
-      if (remainder < 10)
-          tmp[j++] = 48 + remainder;
-      else
-          tmp[j++] = 55 + remainder;
-      quotient = quotient / 16;
-  }
-  for (int w = j; 8-w != 0; ++w) printc('0');
-  for (i = j-1; i >= 0; i--) printc(tmp[i]);
-  while(1);
-}
-
 
 void setIdt()
 {
   /* Program interrups/exception service routines */
   idtR.base  = (DWord)idt;
   idtR.limit = IDT_ENTRIES * sizeof(Gate) - 1;
-
+  
   set_handlers();
-
-  /* Seteamos tres registros MSR para las fast interrupts*/
-  writeMSR( 0x174, 0x0, __KERNEL_CS); 			//Code segment
-  writeMSR( 0x175, 0x0, INITIAL_ESP); 			//System stack
-  writeMSR( 0x176, 0x0, syscall_handler_sysenter); 	//System entry point
 
   /* ADD INITIALIZATION CODE FOR INTERRUPT VECTOR */
   setInterruptHandler(32, clock_handler, 0);
   setInterruptHandler(33, keyboard_handler, 0);
-  setInterruptHandler(14, pf_handler, 0);
 
+  setSysenter();
 
   set_idt_reg(&idtR);
 }
