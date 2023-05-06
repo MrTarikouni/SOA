@@ -19,6 +19,12 @@
 
 #define LECTURA 0
 #define ESCRIPTURA 1
+#define BUFFER_SIZE 256
+
+extern char circular_buffer[BUFFER_SIZE];
+extern char* read_pointer;
+extern char* write_pointer;
+extern int items;
 
 void * get_ebp();
 
@@ -235,4 +241,19 @@ int sys_get_stats(int pid, struct stats *st)
     }
   }
   return -ESRCH; /*ESRCH */
+}
+
+int sys_read(char* b, int maxchars){
+  int i = 0;
+  while ((i < maxchars || i < items) && read_pointer != write_pointer){
+    //b* = *read;
+    if (copy_to_user(read_pointer,b,sizeof(char)) < 0) return -EFAULT;
+    b++;  
+    read_pointer++;
+    //read %= BUFFER_SIZE;
+    if (read_pointer == &circular_buffer[BUFFER_SIZE]) read_pointer = &circular_buffer[0];
+    i++;
+    --items;
+  }
+  return i;
 }

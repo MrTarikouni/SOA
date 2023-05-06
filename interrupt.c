@@ -41,11 +41,26 @@ void clock_routine()
   schedule();
 }
 
+#define BUFFER_SIZE 256
+
+char circular_buffer[BUFFER_SIZE];
+char* read_pointer = &circular_buffer[0];
+char* write_pointer = &circular_buffer[0];
+int items = 0;
+
 void keyboard_routine()
 {
   unsigned char c = inb(0x60);
   
-  if (c&0x80) printc_xy(0, 0, char_map[c&0x7f]);
+  
+  if (items < BUFFER_SIZE && c&0x80){
+    *write_pointer = char_map[c&0x7f];
+    write_pointer++;
+    if (write_pointer == &circular_buffer[BUFFER_SIZE]) write_pointer = &circular_buffer[0];
+    //write = write % BUFFER_SIZE;
+    items++;
+  }
+  
 }
 
 void setInterruptHandler(int vector, void (*handler)(), int maxAccessibleFromPL)
