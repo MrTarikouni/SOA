@@ -63,3 +63,11 @@ void printk(char *string)
   for (i = 0; string[i]; i++)
     printc(string[i]);
 }
+
+int change_xy(Byte mx, Byte my)
+{
+	if (x < 0 || x > NUM_COLUMNS || y < 0 || y > NUM_ROWS) return -1;
+	x=mx;
+	y=my;
+	return 0;
+}

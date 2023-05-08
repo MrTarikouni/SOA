@@ -244,16 +244,21 @@ int sys_get_stats(int pid, struct stats *st)
 }
 
 int sys_read(char* b, int maxchars){
-  int i = 0;
-  while ((i < maxchars || i < items) && read_pointer != write_pointer){
-    //b* = *read;
-    if (copy_to_user(read_pointer,b,sizeof(char)) < 0) return -EFAULT;
-    b++;  
-    read_pointer++;
-    //read %= BUFFER_SIZE;
-    if (read_pointer == &circular_buffer[BUFFER_SIZE]) read_pointer = &circular_buffer[0];
-    i++;
-    --items;
-  }
+	int i = 0;
+  	while ((i < maxchars || i < items) && read_pointer != write_pointer) {
+   		//b* = *read;
+   		if (copy_to_user(read_pointer,b,sizeof(char)) < 0) return -EFAULT;
+    		b++;  
+    		read_pointer++;
+    		//read %= BUFFER_SIZE;
+    		if (read_pointer == &circular_buffer[BUFFER_SIZE]) read_pointer = &circular_buffer[0];
+    		i++;
+    		--items;
+  	}
   return i;
+}
+
+// Changes the current position of the cursor to the x column and y row
+int gotoxy(int x, int y) {
+	return change_xy(x,y);
 }
