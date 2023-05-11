@@ -28,14 +28,6 @@ extern int items;
 
 extern int fg,bg;
 
-struct shframe{
-  int id_frame;
-  int num_ref;
-  int delete;
-};
-
-struct shframe frame_pool[10];
-
 void * get_ebp();
 
 int check_fd(int fd, int permissions)
@@ -256,7 +248,7 @@ int sys_get_stats(int pid, struct stats *st)
 int sys_read(char* b, int maxchars){
 	int i = 0;
 	if (maxchars < 0) return -EINVAL;
-	if (access_ok(VERIFY_READ,b, sizeof(int)*maxchars)) return -EFAULT;
+	if (!access_ok(VERIFY_READ,b, sizeof(int)*maxchars)) return -EFAULT;
   	while ((i < maxchars || i < items) && read_pointer != write_pointer) {
    		//b* = *read;
    		if (copy_to_user(read_pointer,b,sizeof(char)) < 0) return -EFAULT;
@@ -295,13 +287,13 @@ int sys_shmat(int id, void* addr){
   if (id < 0 || id > 9) return -EINVAL;
   if (addr && 0xFFF) return -EINVAL;
   int free_page;
-  if (addr == NULL || !get_frame(current()->dir_pages_baseAddr, (void*) addr >> 12)){
+  if (addr == NULL || !get_frame(current()->dir_pages_baseAddr, (int) addr >> 12)){
     if (free_page =find_empty_page() < 0) return -EFAULT;
   }
   else free_page = (int) addr >> 12;
 
-  set_ss_pag(current()->dir_pages_baseAddr, free_page, frame_pool[id]->id_frame);
-  frame_pool[id]->num_ref++;
+  set_ss_pag(current()->dir_pages_baseAddr, free_page, frame_pool[id].id_frame);
+  frame_pool[id].num_ref++;
 
   return free_page;
 }

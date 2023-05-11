@@ -15,7 +15,7 @@
 /* Bytemap to mark the free physical pages */
 extern Byte phys_mem[TOTAL_PAGES];
 
-extern struct shframe{
+struct shframe{
   int id_frame;
   int num_ref;
   int delete;
