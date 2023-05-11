@@ -15,10 +15,13 @@
 /* Bytemap to mark the free physical pages */
 extern Byte phys_mem[TOTAL_PAGES];
 
+extern int frame_pool[10];
+
 
 extern page_table_entry dir_pages[NR_TASKS][TOTAL_PAGES];
 
 int init_frames( void );
+int init_frame_pool(void);
 int alloc_frame( void );
 void free_frame( unsigned int frame );
 void set_user_pages( struct task_struct *task );

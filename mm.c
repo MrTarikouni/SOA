@@ -10,6 +10,8 @@
 
 Byte phys_mem[TOTAL_PAGES];
 
+int frame_pool[10];
+
 /* SEGMENTATION */
 /* Memory segements description table */
 Descriptor  *gdt = (Descriptor *) GDT_START;
@@ -265,4 +267,13 @@ void del_ss_pag(page_table_entry *PT, unsigned logical_page)
 /* get_frame - Returns the physical frame associated to page 'logical_page' */
 unsigned int get_frame (page_table_entry *PT, unsigned int logical_page){
      return PT[logical_page].bits.pbase_addr; 
+}
+
+int init_frame_pool(){
+  for (int i = 0; i < 10; i++){
+    int physical_page = alloc_frame();
+    if (physical_page > 0) frame_pool[i] = physical_page;
+    else return -1;
+  }
+  return 0;
 }

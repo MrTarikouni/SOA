@@ -26,6 +26,8 @@ extern char* read_pointer;
 extern char* write_pointer;
 extern int items;
 
+extern int fg,bg;
+
 void * get_ebp();
 
 int check_fd(int fd, int permissions)
@@ -259,6 +261,19 @@ int sys_read(char* b, int maxchars){
 }
 
 // Changes the current position of the cursor to the x column and y row
-int gotoxy(int x, int y) {
+int sys_gotoxy(int x, int y) {
 	return change_xy(x,y);
+}
+
+int sys_set_color(int foreground, int background){
+  if (foreground < 16 && foreground>= 0 && background<16 && background >= 0){
+    fg = foreground;
+    bg = background;
+    return 0;
+  }
+  return -EINVAL;
+}
+
+int sys_shmat(int id, void* addr){
+  if (addr == NULL) find_empty_addr();
 }

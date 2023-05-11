@@ -95,6 +95,8 @@ int __attribute__((__section__(".text.main")))
   /* Initialize task 1 data */
   init_task1();
 
+  init_frame_pool();
+
   /* Move user code/data now (after the page table initialization) */
   copy_data((void *) KERNEL_START + *p_sys_size, usr_main, *p_usr_size);
 
