@@ -247,6 +247,8 @@ int sys_get_stats(int pid, struct stats *st)
 
 int sys_read(char* b, int maxchars){
 	int i = 0;
+	if (maxchars < 0) return -EINVAL;
+	if (access_ok(VERIFY_READ,b, sizeof(int)*maxchars)) return -EFAULT;
   	while ((i < maxchars || i < items) && read_pointer != write_pointer) {
    		//b* = *read;
    		if (copy_to_user(read_pointer,b,sizeof(char)) < 0) return -EFAULT;
