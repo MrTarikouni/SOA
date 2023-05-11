@@ -10,7 +10,15 @@
 
 Byte phys_mem[TOTAL_PAGES];
 
-int frame_pool[10];
+struct shframe{
+  int id_frame;
+  int num_ref;
+  int delete;
+};
+
+struct shframe frame_pool[10];
+
+
 
 /* SEGMENTATION */
 /* Memory segements description table */
@@ -272,7 +280,11 @@ unsigned int get_frame (page_table_entry *PT, unsigned int logical_page){
 int init_frame_pool(){
   for (int i = 0; i < 10; i++){
     int physical_page = alloc_frame();
-    if (physical_page > 0) frame_pool[i] = physical_page;
+    if (physical_page > 0){
+      frame_pool[i]->id_frame = physical_page;
+      frame_pool[i]->num_ref = 0;
+      frame_pool[i]->delete = 0;
+    } 
     else return -1;
   }
   return 0;

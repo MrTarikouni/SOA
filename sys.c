@@ -28,6 +28,14 @@ extern int items;
 
 extern int fg,bg;
 
+struct shframe{
+  int id_frame;
+  int num_ref;
+  int delete;
+};
+
+struct shframe frame_pool[10];
+
 void * get_ebp();
 
 int check_fd(int fd, int permissions)
@@ -276,6 +284,24 @@ int sys_set_color(int foreground, int background){
   return -EINVAL;
 }
 
+int find_empty_page(){
+  for (int i = NUM_PAG_KERNEL + NUM_PAG_CODE + 2*NUM_PAG_DATA; i < TOTAL_PAGES-1; ++i){
+    if (!get_frame(current()->dir_pages_baseAddr, i)) return i;
+  }
+  return -1;
+}
+
 int sys_shmat(int id, void* addr){
-  if (addr == NULL) find_empty_addr();
+  if (id < 0 || id > 9) return -EINVAL;
+  if (addr && 0xFFF) return -EINVAL;
+  int free_page;
+  if (addr == NULL || !get_frame(current()->dir_pages_baseAddr, (void*) addr >> 12)){
+    if (free_page =find_empty_page() < 0) return -EFAULT;
+  }
+  else free_page = (int) addr >> 12;
+
+  set_ss_pag(current()->dir_pages_baseAddr, free_page, frame_pool[id]->id_frame);
+  frame_pool[id]->num_ref++;
+
+  return free_page;
 }
