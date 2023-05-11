@@ -1,7 +1,11 @@
+#include "mm.h"
+#include "sched.h"
 #include <utils.h>
 #include <types.h>
-
 #include <mm_address.h>
+
+extern struct shframe frame_pool[10];
+
 
 void copy_data(void *start, void *dest, int size)
 {
@@ -53,6 +57,16 @@ int copy_to_user(void *start, void *dest, int size)
   return 0;
 }
 
+// Check if a page is shared
+int is_shared(unsigned int page)
+{
+  int i;
+  unsigned int frame = get_frame(current()->dir_pages_baseAddr, page);
+  for (i=0;i<10;i++)
+    if (frame_pool[i].id_frame==frame) return 1;
+  return 0;
+}
+
 /* access_ok: Checks if a user space pointer is valid
  * @type:  Type of access: %VERIFY_READ or %VERIFY_WRITE. Note that
  *         %VERIFY_WRITE is a superset of %VERIFY_READ: if it is safe
@@ -74,12 +88,12 @@ int access_ok(int type, const void * addr, unsigned long size)
   {
     case VERIFY_WRITE:
       /* Should suppose no support for automodifyable code */
-      if ((addr_ini>=USER_FIRST_PAGE+NUM_PAG_CODE)&&
-          (addr_fin<=USER_FIRST_PAGE+NUM_PAG_CODE+NUM_PAG_DATA))
+      if (((addr_ini>=USER_FIRST_PAGE+NUM_PAG_CODE)&&
+          (addr_fin<=USER_FIRST_PAGE+NUM_PAG_CODE+NUM_PAG_DATA))||is_shared(addr_ini))
 	  return 1;
     default:
-      if ((addr_ini>=USER_FIRST_PAGE)&&
-  	(addr_fin<=(USER_FIRST_PAGE+NUM_PAG_CODE+NUM_PAG_DATA)))
+      if (((addr_ini>=USER_FIRST_PAGE)&&
+  	(addr_fin<=(USER_FIRST_PAGE+NUM_PAG_CODE+NUM_PAG_DATA)))||is_shared(addr_ini))
           return 1;
   }
   return 0;

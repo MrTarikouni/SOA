@@ -27,6 +27,7 @@ extern char* write_pointer;
 extern int items;
 
 extern int fg,bg;
+extern int x,y;
 
 void * get_ebp();
 
@@ -274,8 +275,12 @@ int sys_read(char* b, int maxchars){
 }
 
 // Changes the current position of the cursor to the x column and y row
-int sys_gotoxy(int x, int y) {
-    return change_xy(x,y);
+int sys_gotoxy(int mx, int my) {
+    if (mx < 0 || mx > NUM_COLUMNS || my < 0 || my > NUM_ROWS) return -1;
+	x=mx;
+	y=my;
+	return 0;
+
 }
 
 int sys_set_color(int foreground, int background){

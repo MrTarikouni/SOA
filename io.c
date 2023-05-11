@@ -10,9 +10,6 @@
 /** Screen  ***/
 /**************/
 
-#define NUM_COLUMNS 80
-#define NUM_ROWS    25
-
 Byte x, y=19;
 int fg = 2;
 int bg = 0;
@@ -66,10 +63,3 @@ void printk(char *string)
     printc(string[i]);
 }
 
-int change_xy(Byte mx, Byte my)
-{
-	if (x < 0 || x > NUM_COLUMNS || y < 0 || y > NUM_ROWS) return -1;
-	x=mx;
-	y=my;
-	return 0;
-}
