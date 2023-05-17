@@ -301,7 +301,7 @@ int find_empty_page(){
 
 int sys_shmat(int id, void* addr) {
     if (id < 0 || id > 9) return -EINVAL;
-    if (addr && 0xFFF) return -EINVAL;//addr must be page aligned
+    if ((int) addr % PAGE_SIZE != 0) return -EINVAL;//addr must be page aligned
     int free_page;
     if (addr == NULL || !get_frame(current()->dir_pages_baseAddr, (int) addr >> 12)){
         if ((free_page = find_empty_page()) < 0) return -EFAULT;
@@ -309,7 +309,7 @@ int sys_shmat(int id, void* addr) {
     else free_page = (int) addr >> 12;
 
     set_ss_pag(current()->dir_pages_baseAddr, free_page, frame_pool[id].id_frame);
-    frame_pool[id].num_ref++;
+    frame_pool[id].num_ref++;//inc ref count
 
     return free_page;
 }

@@ -17,7 +17,7 @@ int __attribute__ ((__section__(".text.main")))
 
     //shmat test
     write(1,"\nshmat test\n",12);
-    int page = shmat(0,(void*)0x00060);
+    int page = shmat(0,(void*)0x00060000);
     itoa(page,buff);
     write(1,buff,strlen(buff));
 
