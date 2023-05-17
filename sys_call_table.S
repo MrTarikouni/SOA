@@ -11,7 +11,7 @@ ENTRY (sys_call_table)
 	.long sys_gotoxy	//6
 	.long sys_set_color	//7
 	.long sys_shmat	//8
-	.long sys_ni_syscall	//9
+	.long sys_shmdt	//9
 	.long sys_gettime	//10
 	.long sys_ni_syscall	//11
 	.long sys_ni_syscall	//12

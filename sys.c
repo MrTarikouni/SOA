@@ -198,7 +198,7 @@ int sys_gettime()
 
 //returns the index of the frame in the frame_pool
 int find_shared_frame(int frame) {
-    for (int i = 0; i < 9; ++i) {
+    for (int i = 0; i < 10; ++i) {
          if (frame_pool[i].id_frame == frame) return i;
     }
     return -1;//shoud never happen
@@ -328,3 +328,18 @@ int sys_shmat(int id, void* addr) {
 
     return free_page;
 }
+
+//Remove the shared region at logical address 'addr'
+int sys_shmdt(void* addr) {
+    if ((int) addr % PAGE_SIZE != 0) return -EINVAL;//addr must be page aligned
+    int frame;
+    if ((frame = get_frame(current()->dir_pages_baseAddr, (int) addr >> 12)) == 0) return -EFAULT;
+    int index_frame = find_shared_frame(frame);
+    frame_pool[index_frame].num_ref--;
+    if (frame_pool[index_frame].num_ref == 0) {//its not referenced anymore
+        free_frame(frame);
+    }
+    del_ss_pag(current()->dir_pages_baseAddr, (int) addr >> 12);
+    return 0;
+}    
+

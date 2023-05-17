@@ -30,6 +30,10 @@ int get_stats(int pid, struct stats *st);
 
 int shmat(int id, void *addr);
 
+int shmdt(void *addr);
+
+int shmrm(int id);
+
 int read(char *b, int maxchars);
 
 int gotoxy(int x, int y);
