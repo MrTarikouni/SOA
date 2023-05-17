@@ -28,4 +28,13 @@ int yield();
 
 int get_stats(int pid, struct stats *st);
 
+int shmat(int id, void *addr);
+
+int read(char *b, int maxchars);
+
+int gotoxy(int x, int y);
+
+int set_color(int foreground, int background);
+
+
 #endif  /* __LIBC_H__ */
