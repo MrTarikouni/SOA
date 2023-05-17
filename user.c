@@ -14,22 +14,34 @@ int __attribute__ ((__section__(".text.main")))
     //set_color test
 	/*set_color(5,6);*/
     
-
     //shmat test
-    write(1,"\nshmat test\n",12);
-    //occupied page case
-    int page = shmat(0,(void*)0x00060000);
+    write(1,"\nShmat test:\n",12);
+    //free page case
+    write(1,"\nfree page case, page = ",24);
+    int page = shmat(0,(void*)0x00130000);
+    itoa(page,buff);
+    write(1,buff,strlen(buff));
+
+    //occupied? page case
+    write(1,"occupied? page case, page = ",20);
+    page = shmat(0,(void*)0x00060000);
     itoa(page,buff);
     write(1,buff,strlen(buff));
     int pid_hijo = fork();
     if (pid_hijo == 0) {
-        int page = shmat(0,(void*)0x00060000);
+        //son case
+        write(1,"\nson case, page = ",17);
+        page = shmat(0,(void*)0x00060000);
         itoa(page,buff);
         write(1,buff,strlen(buff));
         exit();
     }
     //page in fork range case
+    write(1,"\npage in fork range case, page = ",32);
     page = shmat(0,(void*)0x0011C000);
+    itoa(page,buff);
+    write(1,buff,strlen(buff));
+
 
   while(1) {
   	int res = read(&vector[0],1);

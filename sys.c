@@ -196,6 +196,14 @@ int sys_gettime()
     return zeos_ticks;
 }
 
+//returns the index of the frame in the frame_pool
+int find_shared_frame(int frame) {
+    for (int i = 0; i < 9; ++i) {
+         if (frame_pool[i].id_frame == frame) return i;
+    }
+    return -1;//shoud never happen
+}
+
 void sys_exit()
 {  
     int i;
@@ -210,11 +218,13 @@ void sys_exit()
     }
 
     // Deallocate the shared physical pages
-    for (i=NUM_PAG_KERNEL + NUM_PAG_CODE + NUM_PAG_DATA + 20; i<TOTAL_PAGES; i++) {
-        if (!get_frame(process_PT,i)) {
-            frame_pool[i].num_ref--;
-            if (frame_pool[i].num_ref == 0) {
-                free_frame(i);
+    int frame;
+    for (i=PAG_LOG_INIT_DATA + NUM_PAG_DATA + 20; i<TOTAL_PAGES; i++) {
+        if ((frame = get_frame(process_PT,i)) != 0) {
+            int index_frame = find_shared_frame(frame);
+            frame_pool[index_frame].num_ref--;
+            if (frame_pool[index_frame].num_ref == 0) {//its not referenced anymore
+                free_frame(frame);
             }
             del_ss_pag(process_PT, i);
         }
@@ -300,8 +310,7 @@ int find_empty_page(){
 }
 
 int valid_addr(int *addr) {
-    if ((NUM_PAG_KERNEL + NUM_PAG_CODE + 2*NUM_PAG_DATA) < ((int) addr >> 12)) printk("Fuera de la zona del fork\n");
-    return (addr != NULL && !get_frame(current()->dir_pages_baseAddr, (int) addr >> 12) && ((NUM_PAG_KERNEL + NUM_PAG_CODE + 2*NUM_PAG_DATA) < ((int) addr >> 12)));
+    return (addr != NULL && !get_frame(current()->dir_pages_baseAddr, (int) addr >> 12) && ((PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA) < ((int) addr >> 12)/*fuera de la zona del fork*/));
 }
 
 int sys_shmat(int id, void* addr) {
