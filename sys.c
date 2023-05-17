@@ -219,8 +219,9 @@ void sys_exit()
 
     // Deallocate the shared physical pages
     int frame;
-    for (i=PAG_LOG_INIT_DATA + NUM_PAG_DATA + 20; i<TOTAL_PAGES; i++) {
-        if ((frame = get_frame(process_PT,i)) != 0) {
+    for (i=PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA; i<TOTAL_PAGES; i++) {
+        frame = get_frame(process_PT,i);
+        if (frame != 0) {
             int index_frame = find_shared_frame(frame);
             frame_pool[index_frame].num_ref--;
             if (frame_pool[index_frame].num_ref == 0) {//its not referenced anymore
@@ -303,14 +304,14 @@ int sys_set_color(int foreground, int background){
 }
 
 int find_empty_page(){
-    for (int i = NUM_PAG_KERNEL + NUM_PAG_CODE + 2*NUM_PAG_DATA; i < TOTAL_PAGES-1; ++i) {
+    for (int i = PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA; i < TOTAL_PAGES; ++i) {
         if (!get_frame(current()->dir_pages_baseAddr, i)) return i;
     }
     return -1;
 }
 
 int valid_addr(int *addr) {
-    return (addr != NULL && !get_frame(current()->dir_pages_baseAddr, (int) addr >> 12) && ((PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA) < ((int) addr >> 12)/*fuera de la zona del fork*/));
+    return (addr != NULL && !get_frame(current()->dir_pages_baseAddr, (int) addr >> 12) && ((PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA) <= ((int) addr >> 12)/*fuera de la zona del fork*/));
 }
 
 int sys_shmat(int id, void* addr) {
