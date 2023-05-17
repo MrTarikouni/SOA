@@ -299,11 +299,17 @@ int find_empty_page(){
     return -1;
 }
 
+int valid_addr(int *addr) {
+    if ((NUM_PAG_KERNEL + NUM_PAG_CODE + 2*NUM_PAG_DATA) < ((int) addr >> 12)) printk("Fuera de la zona del fork\n");
+    return (addr != NULL && !get_frame(current()->dir_pages_baseAddr, (int) addr >> 12) && ((NUM_PAG_KERNEL + NUM_PAG_CODE + 2*NUM_PAG_DATA) < ((int) addr >> 12)));
+}
+
 int sys_shmat(int id, void* addr) {
     if (id < 0 || id > 9) return -EINVAL;
     if ((int) addr % PAGE_SIZE != 0) return -EINVAL;//addr must be page aligned
     int free_page;
-    if (addr == NULL || !get_frame(current()->dir_pages_baseAddr, (int) addr >> 12)){
+    if (!valid_addr(addr)) {
+        printk("Invalid addr\n");
         if ((free_page = find_empty_page()) < 0) return -EFAULT;
     }
     else free_page = (int) addr >> 12;

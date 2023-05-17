@@ -12,14 +12,24 @@ int __attribute__ ((__section__(".text.main")))
 	
     char vector[50];
     //set_color test
-	set_color(5,6);
+	/*set_color(5,6);*/
     
 
     //shmat test
     write(1,"\nshmat test\n",12);
+    //occupied page case
     int page = shmat(0,(void*)0x00060000);
     itoa(page,buff);
     write(1,buff,strlen(buff));
+    int pid_hijo = fork();
+    if (pid_hijo == 0) {
+        int page = shmat(0,(void*)0x00060000);
+        itoa(page,buff);
+        write(1,buff,strlen(buff));
+        exit();
+    }
+    //page in fork range case
+    page = shmat(0,(void*)0x0011C000);
 
   while(1) {
   	int res = read(&vector[0],1);
