@@ -61,7 +61,7 @@ int copy_to_user(void *start, void *dest, int size)
 int is_shared(unsigned int page)
 {
   int i;
-  unsigned int frame = get_frame(current()->dir_pages_baseAddr, page);
+  unsigned int frame = get_frame(get_PT(current()), page);
   for (i=0;i<10;i++)
     if (frame_pool[i].id_frame==frame) return 1;
   return 0;

@@ -13,6 +13,8 @@ int __attribute__ ((__section__(".text.main")))
     char vector[50];
     //set_color test
 	/*set_color(5,6);*/
+     
+    
     
     //shmat test
     write(1,"\nShmat test:\n",12);
@@ -21,8 +23,7 @@ int __attribute__ ((__section__(".text.main")))
     int page = shmat(0,(void*)0x00130000);
     itoa(page,buff);
     write(1,buff,strlen(buff));
-
-    //occupied? page case
+    //occupied page case
     write(1,"occupied? page case, page = ",20);
     page = shmat(0,(void*)0x00060000);
     itoa(page,buff);
@@ -41,6 +42,10 @@ int __attribute__ ((__section__(".text.main")))
     page = shmat(0,(void*)0x0011C000);
     itoa(page,buff);
     write(1,buff,strlen(buff));
+    //shmdt and shmrm
+    page = shmat(1,(void*)0x00135000);
+    shmrm(1);
+    shmdt((void*)0x00135000);
 
 
   while(1) {

@@ -65,6 +65,14 @@ int ret_from_fork()
     return 0;
 }
 
+//returns the index of the frame in the frame_pool
+int find_shared_frame(int frame) {
+    for (int i = 0; i < 10; ++i) {
+         if (frame_pool[i].id_frame == frame) return i;
+    }
+    return -1;//shoud never happen
+}
+
 int sys_fork(void)
 {
     struct list_head *lhcurrent = NULL;
@@ -128,6 +136,16 @@ int sys_fork(void)
         set_ss_pag(parent_PT, pag+NUM_PAG_DATA, get_frame(process_PT, pag));
         copy_data((void*)(pag<<12), (void*)((pag+NUM_PAG_DATA)<<12), PAGE_SIZE);
         del_ss_pag(parent_PT, pag+NUM_PAG_DATA);
+    }
+
+    //Copy shared pages from parent to child
+    for (pag=PAG_LOG_INIT_DATA+2*NUM_PAG_DATA; pag<TOTAL_PAGES; ++pag) {
+        int frame = get_frame(parent_PT, pag);
+        if (frame != 0) {
+            int index_frame = find_shared_frame(frame);
+            frame_pool[index_frame].num_ref++;
+            set_ss_pag(process_PT, pag,frame);
+        }
     }
     /* Deny access to the child's memory space */
     set_cr3(get_DIR(current()));
@@ -196,14 +214,6 @@ int sys_gettime()
     return zeos_ticks;
 }
 
-//returns the index of the frame in the frame_pool
-int find_shared_frame(int frame) {
-    for (int i = 0; i < 10; ++i) {
-         if (frame_pool[i].id_frame == frame) return i;
-    }
-    return -1;//shoud never happen
-}
-
 void sys_exit()
 {  
     int i;
@@ -220,13 +230,10 @@ void sys_exit()
     // Deallocate the shared physical pages
     int frame;
     for (i=PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA; i<TOTAL_PAGES; i++) {
-        frame = get_frame(process_PT,i);
+        frame = get_frame(process_PT, i);
         if (frame != 0) {
             int index_frame = find_shared_frame(frame);
-            frame_pool[index_frame].num_ref--;
-            if (frame_pool[index_frame].num_ref == 0) {//its not referenced anymore
-                free_frame(frame);
-            }
+            frame_pool[index_frame].num_ref--; 
             del_ss_pag(process_PT, i);
         }
     }
@@ -305,13 +312,13 @@ int sys_set_color(int foreground, int background){
 
 int find_empty_page(){
     for (int i = PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA; i < TOTAL_PAGES; ++i) {
-        if (!get_frame(current()->dir_pages_baseAddr, i)) return i;
+        if (!get_frame(get_PT(current()), i)) return i;
     }
     return -1;
 }
 
 int valid_addr(int *addr) {
-    return (addr != NULL && !get_frame(current()->dir_pages_baseAddr, (int) addr >> 12) && ((PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA) <= ((int) addr >> 12)/*fuera de la zona del fork*/));
+    return (addr != NULL && !get_frame(get_PT(current()), (int) addr >> 12) && ((PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA) <= ((int) addr >> 12)/*fuera de la zona del fork*/));
 }
 
 int sys_shmat(int id, void* addr) {
@@ -319,12 +326,11 @@ int sys_shmat(int id, void* addr) {
     if ((int) addr % PAGE_SIZE != 0) return -EINVAL;//addr must be page aligned
     int free_page;
     if (!valid_addr(addr)) {
-        printk("Invalid addr\n");
         if ((free_page = find_empty_page()) < 0) return -EFAULT;
     }
     else free_page = (int) addr >> 12;
-
-    set_ss_pag(current()->dir_pages_baseAddr, free_page, frame_pool[id].id_frame);
+    
+    set_ss_pag(get_PT(current()), free_page, frame_pool[id].id_frame);
     frame_pool[id].num_ref++;//inc ref count
 
     return free_page;
@@ -334,13 +340,22 @@ int sys_shmat(int id, void* addr) {
 int sys_shmdt(void* addr) {
     if ((int) addr % PAGE_SIZE != 0) return -EINVAL;//addr must be page aligned
     int frame;
-    if ((frame = get_frame(current()->dir_pages_baseAddr, (int) addr >> 12)) == 0) return -EFAULT;
+    if ((frame = get_frame(get_PT(current()), (int) addr >> 12)) == 0) return -EFAULT;
     int index_frame = find_shared_frame(frame);
     frame_pool[index_frame].num_ref--;
-    if (frame_pool[index_frame].num_ref == 0) {//its not referenced anymore
-        free_frame(frame);
+    if (frame_pool[index_frame].num_ref == 0 && frame_pool[index_frame].delete) {//its not referenced anymore
+        //clear page starting at addr
+        for (int i = 0; i < PAGE_SIZE; ++i) {
+            *((char*) addr + i) = 0;
+        }
     }
-    del_ss_pag(current()->dir_pages_baseAddr, (int) addr >> 12);
+    del_ss_pag(get_PT(current()), (int) addr >> 12);
     return 0;
-}    
+}
+
+int sys_shmrm(int id) {
+    if (id < 0 || id > 9) return -EINVAL;
+    frame_pool[id].delete = 1;
+    return 0;
+}
 

@@ -13,7 +13,7 @@ ENTRY (sys_call_table)
 	.long sys_shmat	//8
 	.long sys_shmdt	//9
 	.long sys_gettime	//10
-	.long sys_ni_syscall	//11
+	.long sys_shmrm	//11
 	.long sys_ni_syscall	//12
 	.long sys_yield		//13
 	.long sys_ni_syscall	//14
