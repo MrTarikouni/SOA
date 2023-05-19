@@ -235,6 +235,11 @@ void sys_exit()
             int index_frame = find_shared_frame(frame);
             frame_pool[index_frame].num_ref--; 
             del_ss_pag(process_PT, i);
+            if (frame_pool[index_frame].num_ref == 0 && frame_pool[index_frame].delete) {//its not referenced anymore               //clear page starting at addr
+                for (int i = 0; i < PAGE_SIZE; ++i) {
+                    *((char*) (frame << 12) + i) = 0;
+                }
+            }
         }
     }
         
