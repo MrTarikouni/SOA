@@ -3,7 +3,19 @@
 char buff[24];
 
 int pid;
+int frames = 0;
 
+float fps(){ 
+  return (float) (frames/(gettime()/18.0));
+} 
+
+void show_fps(){
+    gotoxy(70,2);
+    write(1,"FPS:",4);
+    float res = fps();
+    itoa(res,buff);
+    write(1,buff,strlen(buff));
+}
 int __attribute__ ((__section__(".text.main")))
   main(void)
 {
@@ -49,6 +61,7 @@ int __attribute__ ((__section__(".text.main")))
 
 
   while(1) {
+    show_fps();
   	int res = read(&vector[0],1);
   	itoa(res,buff);
 	//write(1,vector,strlen(vector));
