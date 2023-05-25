@@ -14,7 +14,7 @@ extern Register idtR;
 
 void setInterruptHandler(int vector, void (*handler)(), int maxAccessibleFromPL);
 void setTrapHandler(int vector, void (*handler)(), int maxAccessibleFromPL);
-
+unsigned int get_cr2();
 void setIdt();
 
 #endif  /* __INTERRUPT_H__ */

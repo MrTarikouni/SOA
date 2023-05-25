@@ -1,11 +1,14 @@
 /*
  * interrupt.c -
  */
+#include "mm.h"
 #include <types.h>
 #include <interrupt.h>
 #include <segment.h>
 #include <hardware.h>
 #include <io.h>
+#include "libc.h"
+#include "utils.h"
 
 #include <sched.h>
 
@@ -66,49 +69,48 @@ void keyboard_routine()
 }
 
 void pf_routine(int flags, int eip) {
-  char bff[10];
-  itoa(eip,bff);
-  //printk("PAGE FAULT exception at EIP: 0x");
-  int quotient, remainder;
-  int i, j = 0;
-
-  char tmp[100];
-
-  quotient = eip;
-
-  while (quotient != 0)   //Decimal a hexadecimal
-  {
-      remainder = quotient % 16;
-      if (remainder < 10)
-          tmp[j++] = 48 + remainder;
-      else
-          tmp[j++] = 55 + remainder;
-      quotient = quotient / 16;
-  }
-
-  page_table_entry *PT = get_PT(current());
-  int logical_page = (int) get_cr2() >> 12;
-  int physical_page = get_frame(PT,logical_page);
-  if (phys_mem[physical_page] >1){
-    if (PT[logical_page].bits.rw == 0){
-    int new_ph_pag = alloc_frame();
-    int pag;
-    for (pag = PAG_LOG_INIT_DATA + NUM_PAG_DATA; pag < TOTAL_PAGES && PT[pag].bits.present == 1; ++pag); 
-    set_ss_pag(PT, pag, new_ph_pag);
-    copy_data((void*)(logical_page << 12),(void*)(pag << 12), PAGE_SIZE);
-    del_ss_pag(PT,logical_page);
-    set_ss_pag(PT,logical_page,new_ph_pag);
-
-    del_ss_pag(PT,pag);
+    page_table_entry *PT = get_PT(current());
+    int logical_page = (int) get_cr2() >> 12;
+    int physical_page = get_frame(PT,logical_page);
+    if (phys_mem[physical_page] >1){
+        if (PT[logical_page].bits.rw == 0){
+            int new_ph_pag = alloc_frame();
+            int pag;
+            for (pag = PAG_LOG_INIT_DATA + NUM_PAG_DATA; pag < TOTAL_PAGES && PT[pag].bits.present == 1; ++pag); 
+            set_ss_pag(PT, pag, new_ph_pag);
+            copy_data((void*)(logical_page << 12),(void*)(pag << 12), PAGE_SIZE);
+            del_ss_pag(PT,logical_page);
+            set_ss_pag(PT,logical_page,new_ph_pag);
+            del_ss_pag(PT,pag);
+            set_cr3(get_DIR(current()));
+        }
     }
-  }
-  else if (phys_mem[physical_page] == 1){
-    PT[logical_page].bits.rw = 1;
-  }
-  else {
-    for (int w = j; 8-w != 0; ++w) printc('0');
-  for (i = j-1; i >= 0; i--) printc(tmp[i]);
-  }
+    else if (phys_mem[physical_page] == 1){
+        PT[logical_page].bits.rw = 1;
+    }
+    else {
+        char bff[10];
+        itoa(eip,bff);
+        //printk("PAGE FAULT exception at EIP: 0x");
+        int quotient, remainder;
+        int i, j = 0;
+
+        char tmp[100];
+
+        quotient = eip;
+
+        while (quotient != 0)   //Decimal a hexadecimal
+        {
+            remainder = quotient % 16;
+            if (remainder < 10)
+                tmp[j++] = 48 + remainder;
+            else
+                tmp[j++] = 55 + remainder;
+            quotient = quotient / 16;
+        }
+        for (int w = j; 8-w != 0; ++w) printc('0');
+        for (i = j-1; i >= 0; i--) printc(tmp[i]);
+    }
 
   
   //while(1);

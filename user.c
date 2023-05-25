@@ -27,11 +27,15 @@ int __attribute__ ((__section__(".text.main")))
 	/*set_color(5,6);*/
      
     int k = fork();
-    if (k == 0){
+    if (k == 0) {
+        write(1,"Soy el hijo\n",12);
         pid = 6600;
+        exit();
     }
     else pid =222;
 
+    itoa(pid,buff);
+    write(1,buff,strlen(buff));
 
     /*
     //shmat test
@@ -68,7 +72,7 @@ int __attribute__ ((__section__(".text.main")))
 */
 
   while(1) {
-    show_fps();
+    //show_fps();
   	int res = read(&vector[0],1);
   	itoa(res,buff);
 	//write(1,vector,strlen(vector));

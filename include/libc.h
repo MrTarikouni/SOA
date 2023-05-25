@@ -24,6 +24,8 @@ int fork();
 
 void exit();
 
+int gettime();
+
 int yield();
 
 int get_stats(int pid, struct stats *st);
