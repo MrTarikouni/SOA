@@ -2,7 +2,7 @@
 
 char buff[24];
 
-int pid;
+int pid = 0;
 int frames = 0;
 
 float fps(){ 
@@ -26,8 +26,14 @@ int __attribute__ ((__section__(".text.main")))
     //set_color test
 	/*set_color(5,6);*/
      
-    
-    
+    int k = fork();
+    if (k == 0){
+        pid = 6600;
+    }
+    else pid =222;
+
+
+    /*
     //shmat test
     write(1,"\nShmat test:\n",12);
     //free page case
@@ -59,6 +65,7 @@ int __attribute__ ((__section__(".text.main")))
     shmrm(1);
     shmdt((void*)0x00135000);
 
+*/
 
   while(1) {
     show_fps();

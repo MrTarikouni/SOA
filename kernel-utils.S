@@ -29,6 +29,10 @@ ENTRY(get_ebp)
 	mov %ebp, %eax
 	ret
 
+ENTRY(get_cr2)
+	mov %cr2, %eax
+	ret
+	
 /* void setMSR(unsigned long msr_number, unsigned long high, unsigned long low)*/
 ENTRY(setMSR)
 	push %ebp

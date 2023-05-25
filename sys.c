@@ -130,12 +130,19 @@ int sys_fork(void)
         set_ss_pag(process_PT, PAG_LOG_INIT_CODE+pag, get_frame(parent_PT, PAG_LOG_INIT_CODE+pag));
     }
     /* Copy parent's DATA to child. We will use TOTAL_PAGES-1 as a temp logical page to map to */
-    for (pag=NUM_PAG_KERNEL+NUM_PAG_CODE; pag<NUM_PAG_KERNEL+NUM_PAG_CODE+NUM_PAG_DATA; pag++)
+    /*for (pag=NUM_PAG_KERNEL+NUM_PAG_CODE; pag<NUM_PAG_KERNEL+NUM_PAG_CODE+NUM_PAG_DATA; pag++)
     {
-        /* Map one child page to parent's address space. */
+        
         set_ss_pag(parent_PT, pag+NUM_PAG_DATA, get_frame(process_PT, pag));
         copy_data((void*)(pag<<12), (void*)((pag+NUM_PAG_DATA)<<12), PAGE_SIZE);
         del_ss_pag(parent_PT, pag+NUM_PAG_DATA);
+    }*/
+
+    for (pag=PAG_LOG_INIT_DATA; pag<PAG_LOG_INIT_DATA+NUM_PAG_DATA; pag++)
+    {
+        set_ss_pag(process_PT, pag, get_frame(parent_PT, pag));
+        parent_PT[pag].bits.rw = 0;
+        process_PT[pag].bits.rw = 0;
     }
 
     //Copy shared pages from parent to child

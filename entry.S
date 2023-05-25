@@ -117,3 +117,12 @@ sysenter_fin:
 	movl 12(%esp), %ecx	      // User stack address
 	sti
 	sysexit
+
+
+ENTRY(pf_handler)
+      SAVE_ALL
+      call pf_routine;
+      RESTORE_ALL
+      addl $4, %esp
+      iret;
+
